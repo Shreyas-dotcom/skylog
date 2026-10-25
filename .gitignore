@@ -1,0 +1,5 @@
+# Personal flight data and the personal build that embeds it
+data/
+/Skylog.html
+*.json.tmp
+node_modules/

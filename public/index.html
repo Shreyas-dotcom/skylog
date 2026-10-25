@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skylog</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232a78d6' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar" id="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
+      Skylog
+    </div>
+    <span class="save-state" id="save-state"></span>
+    <button class="btn small ghost hidden" id="btn-backup"></button>
+    <div class="spacer"></div>
+    <div class="actions">
+      <input class="search" id="search" type="search" placeholder="Search flights, airports, tails…" aria-label="Search flights">
+      <button class="btn primary" id="btn-add" title="Add flight (N)">+ Add flight</button>
+      <button class="btn" id="btn-import">Import</button>
+      <button class="btn" id="btn-export">Export ▾</button>
+      <button class="btn" id="btn-units" title="Switch units">km</button>
+      <button class="btn" id="btn-theme" title="Theme">Auto</button>
+    </div>
+  </header>
+
+  <div class="filterbar" id="filterbar"></div>
+
+  <section class="hero">
+    <div class="map" id="map"></div>
+    <div class="hud" id="hud"></div>
+    <div class="map-controls">
+      <div class="seg" id="seg-mode">
+        <button data-mode="flat">Map</button>
+        <button data-mode="globe">Globe</button>
+      </div>
+      <div class="seg" id="seg-color">
+        <button data-color="frequency">Frequency</button>
+        <button data-color="recency">Recency</button>
+      </div>
+      <div class="seg">
+        <button id="btn-replay" title="Replay your flights in order">▶ Replay</button>
+      </div>
+      <div class="seg">
+        <button id="btn-zin" title="Zoom in" aria-label="Zoom in">+</button>
+        <button id="btn-zout" title="Zoom out" aria-label="Zoom out">−</button>
+        <button id="btn-reset" title="Reset view (double-click map)" aria-label="Reset view">⟲</button>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="replay hidden" id="replay">
+      <div class="now" id="rp-date"></div>
+      <div class="leg" id="rp-leg"></div>
+      <div class="ctrl">
+        <button class="btn small" id="rp-pause">Pause</button>
+        <button class="btn small" id="rp-speed">1×</button>
+        <button class="btn small" id="rp-stop">✕</button>
+      </div>
+      <div class="bar"><i id="rp-bar"></i></div>
+    </div>
+  </section>
+
+  <nav class="tabs" id="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="flights">Flights</button>
+    <button class="tab" role="tab" data-tab="places">Places</button>
+    <button class="tab" role="tab" data-tab="fleet">Airlines &amp; aircraft</button>
+    <button class="tab" role="tab" data-tab="trips">Routes &amp; trips</button>
+    <button class="tab" role="tab" data-tab="achievements">Achievements</button>
+    <button class="tab" role="tab" data-tab="health">Data health</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <!-- Add / edit flight -->
+  <dialog id="dlg-flight">
+    <form method="dialog" id="flight-form" autocomplete="off">
+      <div class="dlg-head"><h2 id="flight-title">Add flight</h2><button class="btn ghost" value="cancel" formnovalidate>✕</button></div>
+      <div class="dlg-body">
+        <div class="form-grid">
+          <div class="field"><label for="f-date">Date</label><input id="f-date" name="date" type="date" required></div>
+          <div class="field"><label for="f-num">Flight number</label><input id="f-num" name="flightNumber" placeholder="BA117"></div>
+          <div class="field"><label for="f-reg">Registration</label><input id="f-reg" name="registration" placeholder="G-XLEA"></div>
+          <div class="field w3"><label for="f-from">From</label><input id="f-from" name="from" list="dl-airports" placeholder="Code or city" required><div class="hint" id="h-from"></div></div>
+          <div class="field w3"><label for="f-to">To</label><input id="f-to" name="to" list="dl-airports" placeholder="Code or city" required><div class="hint" id="h-to"></div></div>
+          <div class="field"><label for="f-dep">Departure (local)</label><input id="f-dep" name="depTime" type="time"></div>
+          <div class="field"><label for="f-arr">Arrival (local)</label><input id="f-arr" name="arrTime" type="time"></div>
+          <div class="field"><label for="f-dur">Duration</label><input id="f-dur" name="duration" placeholder="hh:mm (auto)"><div class="hint" id="h-dur"></div></div>
+          <div class="field w3"><label for="f-airline">Airline</label><input id="f-airline" name="airline" list="dl-airlines" placeholder="British Airways (BA/BAW)"></div>
+          <div class="field w3"><label for="f-aircraft">Aircraft</label><input id="f-aircraft" name="aircraft" list="dl-aircraft" placeholder="Airbus A380-800 (A388)"></div>
+          <div class="field w1"><label for="f-seat">Seat</label><input id="f-seat" name="seat" placeholder="34K"></div>
+          <div class="field w1"><label for="f-seattype">Seat type</label><select id="f-seattype" name="seatType"></select></div>
+          <div class="field w1"><label for="f-cls">Class</label><select id="f-cls" name="cls"></select></div>
+          <div class="field w1"><label for="f-reason">Reason</label><select id="f-reason" name="reason"></select></div>
+          <div class="field"><label for="f-note">Note</label><input id="f-note" name="note" placeholder="Livery, diversion…"></div>
+          <div class="form-preview" id="f-preview"></div>
+        </div>
+      </div>
+      <div class="dlg-foot">
+        <button class="btn danger" type="button" id="f-delete">Delete</button>
+        <button class="btn" type="button" id="f-return" title="Save, then start the return flight">Save &amp; add return</button>
+        <div class="spacer"></div>
+        <button class="btn" value="cancel" formnovalidate>Cancel</button>
+        <button class="btn primary" value="save" id="f-save">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Import -->
+  <dialog id="dlg-import">
+    <form method="dialog" id="import-form">
+      <div class="dlg-head"><h2>Import flights</h2><button class="btn ghost" value="cancel">✕</button></div>
+      <div class="dlg-body">
+        <label class="drop" id="drop">
+          <input type="file" id="import-file" accept=".csv,.json,text/csv,application/json" hidden>
+          <div><b>Drop a file here</b> or click to choose</div>
+          <div class="muted" style="margin-top:6px">A myFlightradar24 CSV export, or a Skylog JSON backup</div>
+        </label>
+        <div class="radio-row">
+          <label><input type="radio" name="mode" value="merge" checked> Merge (skip duplicates)</label>
+          <label><input type="radio" name="mode" value="replace"> Replace everything</label>
+        </div>
+        <div class="import-summary hidden" id="import-summary"></div>
+      </div>
+      <div class="dlg-foot"><div class="spacer"></div><button class="btn" value="cancel">Cancel</button><button class="btn primary" value="go" id="import-go" disabled>Import</button></div>
+    </form>
+  </dialog>
+
+  <!-- Custom airport -->
+  <dialog id="dlg-airport">
+    <form method="dialog" id="airport-form" autocomplete="off">
+      <div class="dlg-head"><h2>Airport</h2><button class="btn ghost" value="cancel" formnovalidate>✕</button></div>
+      <div class="dlg-body">
+        <div class="form-grid">
+          <div class="field"><label for="a-code">IATA code</label><input id="a-code" name="iata" required maxlength="4" placeholder="ABC"></div>
+          <div class="field"><label for="a-icao">ICAO code</label><input id="a-icao" name="icao" maxlength="4" placeholder="KABC"></div>
+          <div class="field"><label for="a-country">Country</label><select id="a-country" name="country"></select></div>
+          <div class="field w3"><label for="a-city">City</label><input id="a-city" name="city" required></div>
+          <div class="field w3"><label for="a-name">Airport name</label><input id="a-name" name="name"></div>
+          <div class="field"><label for="a-lat">Latitude</label><input id="a-lat" name="lat" type="number" step="any" min="-90" max="90" required placeholder="40.6413"></div>
+          <div class="field"><label for="a-lon">Longitude</label><input id="a-lon" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-73.7781"></div>
+          <div class="field"><label for="a-tz">Time zone</label><input id="a-tz" name="tz" list="dl-tz" placeholder="America/New_York"></div>
+        </div>
+        <p class="muted" style="margin:12px 0 0">Tip: search the airport on Wikipedia; coordinates are in the infobox. Custom airports override built-in ones.</p>
+      </div>
+      <div class="dlg-foot"><button class="btn danger" type="button" id="a-delete">Remove</button><div class="spacer"></div><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="save">Save airport</button></div>
+    </form>
+  </dialog>
+
+  <datalist id="dl-airports"></datalist>
+  <datalist id="dl-airlines"></datalist>
+  <datalist id="dl-aircraft"></datalist>
+  <datalist id="dl-tz"></datalist>
+  <div class="tooltip" id="tooltip" role="tooltip"></div>
+  <div class="toast" id="toast"><span id="toast-msg"></span><button id="toast-undo">Undo</button></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

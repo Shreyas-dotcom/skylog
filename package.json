@@ -1,0 +1,10 @@
+{
+  "name": "skylog",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A private, offline personal flight log that runs as a single HTML file.",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs"
+  }
+}
