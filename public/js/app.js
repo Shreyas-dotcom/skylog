@@ -385,7 +385,6 @@ function renderProfile(list, s) {
   const makerItems = top3.map(m => ({ label: m.name, value: m.count }))
     .concat(makers.length > 3 ? [{ label: 'other', value: makers.slice(3).reduce((t, m) => t + m.count, 0), sub: makers.slice(3).map(m => m.name).join(', ') }] : []);
   $('#pies').innerHTML = [
-    ['Class', code(s.cls, [1, 4, 2, 3, 5], CLASSES)],
     ['Seat', code(s.seatType, [1, 2, 3], SEAT_TYPES).concat(s.seatType[4] || s.seatType[5] ? code(s.seatType, [4, 5], SEAT_TYPES) : [])],
     ['Reason', code(s.reason, [1, 2, 3, 4], REASONS)],
     ['Continents', ['Europe', 'Asia', 'North America', 'Oceania', 'South America', 'Africa'].map(c => ({ label: c.replace('North ', 'N ').replace('South ', 'S '), value: conts[c] || 0 }))],
@@ -434,10 +433,13 @@ function milestones() {
     ['yellow', moons === 1 ? 'To the Moon' : `${moons}× to the Moon`, all.km / (moons * MOON_KM), `${dist(moons * MOON_KM - all.km)} to go`],
     ['teal', `${countries} countries`, all.countries.size / countries, `${countries - all.countries.size} to go`],
     ['purple', `${hours.toLocaleString()} hours aloft`, all.minutes / 60 / hours, `${Math.ceil(hours - all.minutes / 60)} h to go`],
-  ];
-  return `<div class="pie-block milestones"><h4>Next milestones</h4>${rows.map(([c, label, p, left]) => `
-    <div class="ms"><div class="ms-top"><b>${label}</b><span>${left}</span></div>
-      <div class="ms-bar"><i data-w="${Math.min(100, p * 100).toFixed(1)}" style="background:var(--${c}-1)"></i></div></div>`).join('')}</div>`;
+  ].sort((a, b) => b[2] - a[2]);
+  const row = ([c, label, p, left], full) => `<div class="ms"><div class="ms-top"><b>${label}</b><span>${full ? left : Math.floor(p * 100) + '%'}</span></div>
+      <div class="ms-bar"><i data-w="${Math.min(100, p * 100).toFixed(1)}" style="background:var(--${c}-1)"></i></div></div>`;
+  // Compact: the two closest milestones. Click to pop open all of them with how much is left.
+  return `<div class="pie-block milestones" data-act="ms-toggle" title="Show all milestones">
+    <h4>Next milestones <span class="chev">▾</span></h4>${rows.slice(0, 2).map(r => row(r)).join('')}
+    <div class="ms-pop"><h4>Next milestones</h4>${rows.map(r => row(r, true)).join('')}<div class="ms-note">Counted across all years</div></div></div>`;
 }
 
 // Top-list cards. Each aggregates flights by some key; "Flights" counts each flight once per key.
@@ -763,6 +765,11 @@ document.addEventListener('click', e => {
     case 'card-filter': { const card = CARDS.find(c => c.id === el.dataset.card); state.filter[card.filter] = v; go('flights'); break; }
     case 'card-metric': state.cardMetric[el.dataset.card] = v; refresh(); break;
     case 'compare': openCompare(v || el.dataset.card); break;
+    case 'ms-toggle':
+      el.classList.toggle('pop-left', el.getBoundingClientRect().right < 330); // open rightwards when near the left edge
+      el.classList.toggle('open');
+      el.querySelectorAll('.ms-pop .ms-bar i').forEach(i => { i.style.width = i.dataset.w + '%'; });
+      break;
     case 'rec-filter': state.filter[el.dataset.k] = v; go('flights'); break;
     case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;
@@ -774,6 +781,8 @@ document.addEventListener('click', e => {
     case 'fix-airport': openAirport(v); break;
   }
 });
+// Clicking anywhere else closes the milestones pop-up.
+document.addEventListener('click', e => { if (!e.target.closest('.milestones')) document.querySelector('.milestones.open')?.classList.remove('open'); });
 document.addEventListener('mouseover', e => {
   if (state.page !== 'profile') return;
   const r = e.target.closest?.('[data-route]');
