@@ -1,6 +1,6 @@
 import { createMap, FREQ, freqColor } from './map.js';
 import { fromFR24CSV, toFR24CSV, SEAT_TYPES, CLASSES, REASONS, flightKey, newId, parseAirline, parseAircraft } from './fr24.js';
-import { enrich, summarize, healthCheck, byCount, journeys, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI } from './stats.js';
+import { enrich, summarize, healthCheck, byCount, journeys, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI, HAULS, HAUL_RANGES } from './stats.js';
 import { COUNTRIES } from './airports.js';
 import { VAULT_FILE, newSession, seal, openVault, exportSession, importSession, detectRepo, githubStore } from './vault.js';
 
@@ -245,6 +245,12 @@ function recompute() {
   state.db.dismissed ||= [];
   const e = enrich(state.db);
   state.all = e.flights; state.ap = e.ap;
+  // Flights dated after today are "upcoming": shown on the map and in the list, but not counted
+  // in stats, records or milestones until they've happened.
+  const today = new Date().toLocaleDateString('en-CA');
+  for (const f of state.all) f.upcoming = f.date > today;
+  state.past = state.all.filter(f => !f.upcoming);
+  state.upcoming = state.all.filter(f => f.upcoming);
   const dismissed = new Set(state.db.dismissed);
   state.issues = healthCheck(state.all).map(i => ({ ...i, dismissed: dismissed.has(i.id) }));
   state.issueBy = new Map();
@@ -255,11 +261,12 @@ function recompute() {
   refresh();
 }
 
-const byYear = () => state.all.filter(f => !state.filter.year || f.year === state.filter.year);
+const inYear = f => !state.filter.year || f.year === state.filter.year;
+const byYear = () => state.past.filter(inYear);
 function flightsFiltered() {
   const { airport, airline, route, aircraft, q } = state.filter;
   const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return byYear().filter(f => (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
+  return state.all.filter(inYear).filter(f => (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
     && (!route || f.routeKey === route) && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t)));
 }
 
@@ -306,14 +313,17 @@ const map = createMap($('#map'), {
   tooltip,
   onRoute: r => { state.filter.route = r.key; go('flights'); },
   onAirport: a => { state.filter.airport = a.code; go('flights'); },
+  onUpcoming: f => openFlight(f.id),
 });
 function updateMap(s) {
   map.update({
     routes: byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown), fmtDist: dist,
     airports: byCount(s.airports).filter(a => !a.a.unknown),
+    upcoming: state.upcoming.filter(inYear).filter(f => f.path).map(f => ({ key: f.id, a: f.A, b: f.B, f })),
     countries: [...s.countries.values()].map(c => c.id).filter(Boolean),
   });
-  $('#legend').innerHTML = `<b>Times flown</b>${FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('')}`;
+  $('#legend').innerHTML = `<b>Times flown</b>${FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('')}`
+    + (state.upcoming.length ? `<span><i class="dash"></i>Upcoming</span>` : '');
   document.querySelectorAll('#seg-mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mapMode));
 }
 $('#seg-mode').onclick = e => { const m = e.target.dataset.mode; if (!m) return; state.mapMode = m; store.set('mapMode', m); map.setMode(m); updateMap(current.s); };
@@ -359,7 +369,7 @@ function renderProfile(list, s) {
   const km = state.units === 'mi' ? s.km / KM_PER_MI : s.km, other = state.units === 'mi' ? s.km : s.km / KM_PER_MI;
   $('#big-stats').innerHTML = `
     <div class="big"><div class="v">${s.count.toLocaleString()}<small>flight${s.count === 1 ? '' : 's'}</small></div>
-      <div class="s"><b>${dom}</b> domestic<br><b>${s.count - dom}</b> international</div></div>
+      <div class="s"><b>${dom}</b> domestic<br><b>${s.count - dom}</b> international${state.upcoming.filter(inYear).length ? `<br><b class="up">${state.upcoming.filter(inYear).length}</b> upcoming` : ''}</div></div>
     <div class="big"><div class="v">${n0(km)}<small>${state.units}</small></div>
       <div class="s"><b>${n0(other)}</b> ${state.units === 'mi' ? 'km' : 'miles'}<br><b>${(s.km / EARTH_KM).toFixed(1)}×</b> around the Earth · <b>${(s.km / MOON_KM).toFixed(2)}×</b> to the Moon</div></div>
     <div class="big"><div class="v">${Math.floor(mins / 60).toLocaleString()}<small>h</small> ${Math.round(mins % 60)}<small>min</small></div>
@@ -370,13 +380,20 @@ function renderProfile(list, s) {
   const conts = {};
   for (const a of s.airports.values()) if (a.a.continent) conts[a.a.continent] = (conts[a.a.continent] || 0) + a.count;
   const code = (obj, order, labels) => order.map(k => ({ label: labels[k].toLowerCase(), value: obj[k] || 0 }));
+  // Manufacturers: the top three by flights, the rest folded into "other".
+  const makers = byCount(s.manufacturer), top3 = makers.slice(0, 3);
+  const makerItems = top3.map(m => ({ label: m.name, value: m.count }))
+    .concat(makers.length > 3 ? [{ label: 'other', value: makers.slice(3).reduce((t, m) => t + m.count, 0), sub: makers.slice(3).map(m => m.name).join(', ') }] : []);
   $('#pies').innerHTML = [
     ['Class', code(s.cls, [1, 4, 2, 3, 5], CLASSES)],
     ['Seat', code(s.seatType, [1, 2, 3], SEAT_TYPES).concat(s.seatType[4] || s.seatType[5] ? code(s.seatType, [4, 5], SEAT_TYPES) : [])],
     ['Reason', code(s.reason, [1, 2, 3, 4], REASONS)],
     ['Continents', ['Europe', 'Asia', 'North America', 'Oceania', 'South America', 'Africa'].map(c => ({ label: c.replace('North ', 'N ').replace('South ', 'S '), value: conts[c] || 0 }))],
+    ['Haul', HAULS.map(h => ({ label: h.toLowerCase(), value: s.haul[h] || 0, sub: HAUL_RANGES[h] }))],
+    ['Manufacturer', makerItems],
   ].map(([t, items]) => `<div class="pie-block"><h4>${t}</h4><div class="pie-row">${pie(items)}
-      <div class="pie-legend">${items.map(i => `<div class="${i.value ? '' : 'z'}"><b>${i.value}</b> ${esc(i.label)}</div>`).join('')}</div></div></div>`).join('');
+      <div class="pie-legend">${items.map(i => `<div class="${i.value ? '' : 'z'}" ${i.sub ? `data-tip="${esc(i.sub)}"` : ''}><b>${i.value}</b> ${esc(i.label)}</div>`).join('')}</div></div></div>`).join('')
+    + milestones();
 
   $('#stats').innerHTML = `<div class="cards">${CARDS.map(c => topCard(c, list)).join('')}</div>
     <div class="card trend blue"><div class="head"><h3>Flights per year</h3></div><div class="plot" id="ch-year"></div>
@@ -387,6 +404,7 @@ function renderProfile(list, s) {
     </div>`;
   drawTrends(s);
   growBars($('#stats'));
+  setTimeout(() => document.querySelectorAll('.ms-bar i[data-w]').forEach(b => { b.style.width = b.dataset.w + '%'; }), 30);
 }
 
 function pie(items) {
@@ -401,6 +419,25 @@ function pie(items) {
     a0 = a1;
     return `<path d="${d}" fill="${i.color}" stroke-width="0.02" data-tip="<b>${esc(i.label)}</b> · ${i.value} (${pct(i.value, total)}%)"/>`;
   }).join('')}</svg>`;
+}
+
+// Progress toward the next round-number goals, always counted over all years.
+function milestones() {
+  const all = summarize(state.past);
+  const next = (v, steps) => steps.find(x => x > v) ?? Math.ceil((v + 1) / steps.at(-1)) * steps.at(-1);
+  const flights = next(all.count, [10, 25, 50, 100, 150, 200, 250, 300, 400, 500, 750, 1000]);
+  const moons = Math.floor(all.km / MOON_KM) + 1;
+  const countries = next(all.countries.size, [5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 195]);
+  const hours = next(all.minutes / 60, [100, 250, 500, 750, 1000, 1500, 2000, 3000, 5000]);
+  const rows = [
+    ['green', `${flights} flights`, all.count / flights, `${flights - all.count} to go`],
+    ['yellow', moons === 1 ? 'To the Moon' : `${moons}× to the Moon`, all.km / (moons * MOON_KM), `${dist(moons * MOON_KM - all.km)} to go`],
+    ['teal', `${countries} countries`, all.countries.size / countries, `${countries - all.countries.size} to go`],
+    ['purple', `${hours.toLocaleString()} hours aloft`, all.minutes / 60 / hours, `${Math.ceil(hours - all.minutes / 60)} h to go`],
+  ];
+  return `<div class="pie-block milestones"><h4>Next milestones</h4>${rows.map(([c, label, p, left]) => `
+    <div class="ms"><div class="ms-top"><b>${label}</b><span>${left}</span></div>
+      <div class="ms-bar"><i data-w="${Math.min(100, p * 100).toFixed(1)}" style="background:var(--${c}-1)"></i></div></div>`).join('')}</div>`;
 }
 
 // Top-list cards. Each aggregates flights by some key; "Flights" counts each flight once per key.
@@ -474,13 +511,13 @@ $('#dlg-compare').addEventListener('click', e => {
 });
 
 function yearsFlying() {
-  const ys = state.all.map(f => f.year);
+  const ys = state.past.map(f => f.year);
   return ys.length ? Math.max(...ys) - Math.min(...ys) + 1 : 0;
 }
 // Smooth white line-and-area charts on the colored cards.
 function drawTrends(s) {
-  const ys = state.all.map(f => f.year);
-  const all = summarize(state.all).years;
+  const ys = state.past.map(f => f.year);
+  const all = summarize(state.past).years;
   const years = ys.length ? Array.from({ length: Math.max(...ys) - Math.min(...ys) + 1 }, (_, i) => Math.min(...ys) + i) : [];
   trend($('#ch-year'), years.map(y => ({ label: String(y), value: all.get(y)?.count || 0, sel: state.filter.year === y, year: y,
     tip: `<b>${y}</b> · ${plural(all.get(y)?.count || 0, 'flight')}<div class='t-sub'>${dist(all.get(y)?.km || 0)}</div>` })), 170);
@@ -542,7 +579,7 @@ function renderFlights() {
     const seat = [f.seat, SEAT_TYPES[f.seatType]].filter(Boolean).join(' · ');
     return sep + `<tr data-act="edit" data-id="${f.id}" data-route="${f.routeKey}">
       <td class="logo-cell">${flightLogo(f)}</td>
-      <td class="num">${f.date}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data check</div>"></span>` : ''}</td>
+      <td class="num">${f.date}${f.upcoming ? ' <span class="up-tag">Upcoming</span>' : ''}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data check</div>"></span>` : ''}</td>
       <td class="mono">${esc(f.flightNumber)}</td>
       <td data-tip="${esc(f.A.label)}"><b>${f.from}</b> <span class="muted">${esc(f.A.city)}</span></td>
       <td data-tip="${esc(f.B.label)}"><b>${f.to}</b> <span class="muted">${esc(f.B.city)}</span></td>

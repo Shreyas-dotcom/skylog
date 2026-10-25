@@ -15,12 +15,13 @@ export const FREQ = [
 export const freqColor = n => FREQ.find(b => n <= b.max).color;
 const PIN = 'M0,0 C-1,-4 -6,-7.5 -6,-12.5 A6,6 0 1 1 6,-12.5 C6,-7.5 1,-4 0,0 Z';
 
-export function createMap(el, { tooltip, onRoute, onAirport }) {
+export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
   const svg = d3.select(el).append('svg');
   const gSphere = svg.append('path').attr('class', 'sphere');
   const gGrat = svg.append('path').attr('class', 'graticule');
   const gLand = svg.append('g');
   const gRoutes = svg.append('g');
+  const gUpcoming = svg.append('g');
   const gHits = svg.append('g');
   const gReplay = svg.append('g');
   const gCountryLabels = svg.append('g');
@@ -30,7 +31,7 @@ export function createMap(el, { tooltip, onRoute, onAirport }) {
   const sphere = { type: 'Sphere' };
 
   let land = { lo: null, hi: null }, visited = new Set(), labelsFor = [];
-  let data = { routes: [], airports: [] };
+  let data = { routes: [], airports: [], upcoming: [] };
   let mode = 'flat';
   let w = 800, h = 500, k = 1, rot = [0, 0], ty = 0, center = 0;
   let interacting = false, idleTimer = null, highlight = null, replayState = null;
@@ -102,12 +103,16 @@ export function createMap(el, { tooltip, onRoute, onAirport }) {
       .attr('stroke-opacity', 0.9);
     gRoutes.selectAll('path').order();
     gRoutes.selectAll('path.hl').raise();
-    gHits.selectAll('path').data(routes, r => r.key).join('path')
+    // Upcoming flights: dashed, in their own color, drawn above flown routes.
+    const up = replayState ? [] : (data.upcoming || []);
+    gUpcoming.selectAll('path').data(up, u => u.key).join('path')
+      .attr('class', 'route upcoming').attr('d', u => path(line(u)));
+    gHits.selectAll('path').data([...routes, ...up], r => r.key).join('path')
       .attr('class', 'route-hit').attr('d', r => path(line(r)))
-      .on('mousemove', (ev, r) => tooltip.show(ev, routeTip(r)))
+      .on('mousemove', (ev, r) => tooltip.show(ev, r.f ? upcomingTip(r.f) : routeTip(r)))
       .on('mouseenter', (ev, r) => setHighlight([r.key], true))
       .on('mouseleave', () => { tooltip.hide(); setHighlight(null, true); })
-      .on('click', (ev, r) => onRoute?.(r));
+      .on('click', (ev, r) => r.f ? onUpcoming?.(r.f) : onRoute?.(r));
 
     // Country names (flat map only), largest countries first, skipping collisions.
     const placed = [];
@@ -124,7 +129,10 @@ export function createMap(el, { tooltip, onRoute, onAirport }) {
     // Airport pins: busier airports get slightly bigger pins; southern pins sit in front.
     const maxV = d3.max(data.airports, a => a.count) || 1;
     const size = a => 0.72 + 0.4 * Math.sqrt(a.count / maxV);
-    const aps = data.airports.filter(a => visible(a.a.lon, a.a.lat));
+    const known = new Set(data.airports.map(a => a.code)), extra = new Map();
+    for (const u of data.upcoming || []) for (const [code, a] of [[u.f.from, u.a], [u.f.to, u.b]])
+      if (!known.has(code) && !extra.has(code)) extra.set(code, { code, a, count: 1, deps: 0, arrs: 0 });
+    const aps = [...data.airports, ...extra.values()].filter(a => visible(a.a.lon, a.a.lat));
     gAirports.selectAll('g.pin').data([...aps].sort((a, b) => b.a.lat - a.a.lat), a => a.code).join(enter => {
       const g = enter.append('g').attr('class', 'pin');
       g.append('path').attr('d', PIN); g.append('circle').attr('cy', -12.5).attr('r', 2.3);
@@ -157,6 +165,10 @@ export function createMap(el, { tooltip, onRoute, onAirport }) {
   function routeTip(r) {
     const dir = r.fwd === r.count ? `${r.a.iata} → ${r.b.iata}` : r.fwd === 0 ? `${r.b.iata} → ${r.a.iata}` : `${r.a.iata} ⇄ ${r.b.iata}`;
     return `<b>${dir}</b> · ${r.count} flight${r.count > 1 ? 's' : ''}<div class="t-sub">${r.a.city} – ${r.b.city} · ${data.fmtDist(r.km)}</div>`;
+  }
+
+  function upcomingTip(f) {
+    return `<b>Upcoming · ${f.flightNumber || 'Flight'} ${f.from} → ${f.to}</b><div class="t-sub">${new Date(f.date + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}${f.airline ? ' · ' + f.airline : ''} · ${data.fmtDist(f.dist)}</div>`;
   }
 
   function setHighlight(keys, fromHover) {
