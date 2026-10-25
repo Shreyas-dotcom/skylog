@@ -1,6 +1,6 @@
 import { createMap, FREQ, freqColor } from './map.js';
 import { fromFR24CSV, toFR24CSV, SEAT_TYPES, CLASSES, REASONS, flightKey, newId, parseAirline, parseAircraft } from './fr24.js';
-import { enrich, summarize, healthCheck, byCount, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI } from './stats.js';
+import { enrich, summarize, healthCheck, byCount, journeys, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI } from './stats.js';
 import { COUNTRIES } from './airports.js';
 import { VAULT_FILE, newSession, seal, openVault, exportSession, importSession, detectRepo, githubStore } from './vault.js';
 
@@ -30,6 +30,17 @@ const date = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, {
 const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? '' : 's'}`;
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const fname = f => f.flightNumber || (f.heli ? 'Helicopter' : 'Flight');
+
+// Airline tail logos (the brand marks painted on tails), loaded by IATA code from Google Flights'
+// public image set, which itself serves a blank gray tail for airlines it doesn't know. Flights with
+// no airline code, or images that fail to load, get the same blank tail drawn locally.
+const LOGO_URL = code => `https://www.gstatic.com/flights/airline_logos/70px/${code}.png`;
+const BLANK_TAIL = '<svg class="blank" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21C10 19.5 13.5 13 15.2 3H20v18z" fill="#8e9094"/></svg>';
+function airlineLogo(name, iata, size = '') {
+  const img = iata ? `<img src="${LOGO_URL(iata)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('nologo');this.remove()">` : '';
+  return `<span class="tail ${size} ${iata ? '' : 'nologo'}" title="${esc(name || 'No airline')}">${img}${BLANK_TAIL}</span>`;
+}
+const flightLogo = (f, size) => airlineLogo(f.airline, f.airlineIata, size);
 
 // ---------- tooltip & toast
 const tipEl = $('#tooltip');
@@ -259,13 +270,14 @@ function refresh() {
   renderNav(); renderYearSelect(); updateMap(s);
   if (state.page === 'profile') renderProfile(list, s);
   if (state.page === 'flights') renderFlights();
+  if (state.page === 'records') renderRecords(list, s);
   if (state.page === 'check') renderCheck();
 }
 const setFilter = patch => { Object.assign(state.filter, patch); refresh(); };
 
 function go(page) {
   state.page = page; store.set('page', page);
-  for (const p of ['profile', 'flights', 'check']) $('#page-' + p).classList.toggle('hidden', p !== page);
+  for (const p of ['profile', 'flights', 'records', 'check']) $('#page-' + p).classList.toggle('hidden', p !== page);
   refresh();
   if (page === 'profile') map.rerender();
   scrollTo(0, 0);
@@ -274,7 +286,6 @@ function renderNav() {
   const open = state.issues.filter(i => !i.dismissed && i.severity !== 'info').length;
   document.querySelectorAll('#nav button').forEach(b => {
     if (b.dataset.page === 'check') b.innerHTML = `Data check${open ? `<span class="badge">${open}</span>` : ''}`;
-    if (b.dataset.page === 'flights') b.textContent = 'Flights';
     b.setAttribute('aria-current', b.dataset.page === state.page ? 'page' : 'false');
   });
 }
@@ -447,7 +458,7 @@ function openCompare(id, metric) {
       <div class="metrics">${['flights', 'distance', 'time'].map(mt => `<button class="pill ${mt === metric ? 'on' : ''}" data-cmp="${id}" data-v="${mt}">${METRIC_LABEL[mt]}</button>`).join('')}</div>
       <button class="x" data-close aria-label="Close">✕</button></div>
     <div class="body">${items.map((i, ix) => `<div class="cmp-row" ${card.filter ? `data-cmp-filter="${card.filter}" data-v="${esc(i.key)}"` : ''}>
-        <div class="lbl"><b>${esc(i.label)}</b><span class="muted">${esc(i.sub !== i.label ? i.sub : '')}</span></div>
+        <div class="lbl">${card.id === 'airlines' ? airlineLogo(i.key, i.label.length === 2 ? i.label : '') : ''}<b>${esc(i.label)}</b><span class="muted">${esc(i.sub !== i.label ? i.sub : '')}</span></div>
         <div class="track"><div class="fill" data-w="${i[metric] / max * 100}" style="background:var(--${card.color}-1);transition-delay:${Math.min(ix, 20) * 18}ms"></div></div>
         <div class="val">${metricText(metric, i[metric])}<small>${pct(i[metric], total)}%</small></div></div>`).join('') || '<div class="empty">Nothing here yet.</div>'}</div>`;
   const dlg = $('#dlg-compare');
@@ -525,11 +536,12 @@ function renderFlights() {
     if (key === 'sortTime' && f.year !== lastYear) {
       lastYear = f.year;
       const n = rows.filter(r => r.year === f.year);
-      sep = `<tr class="year-sep"><td colspan="${COLS.length}">${f.year} · ${plural(n.length, 'flight')} · ${dist(n.reduce((t, r) => t + (r.dist || 0), 0))}</td></tr>`;
+      sep = `<tr class="year-sep"><td colspan="${COLS.length + 1}">${f.year} · ${plural(n.length, 'flight')} · ${dist(n.reduce((t, r) => t + (r.dist || 0), 0))}</td></tr>`;
     }
     const iss = state.issueBy.get(f.id);
     const seat = [f.seat, SEAT_TYPES[f.seatType]].filter(Boolean).join(' · ');
     return sep + `<tr data-act="edit" data-id="${f.id}" data-route="${f.routeKey}">
+      <td class="logo-cell">${flightLogo(f)}</td>
       <td class="num">${f.date}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data check</div>"></span>` : ''}</td>
       <td class="mono">${esc(f.flightNumber)}</td>
       <td data-tip="${esc(f.A.label)}"><b>${f.from}</b> <span class="muted">${esc(f.A.city)}</span></td>
@@ -549,12 +561,121 @@ function renderFlights() {
       ${chips.map(([k, l]) => `<span class="chipf">${esc(l)}<button data-act="unfilter" data-v="${k}" aria-label="Remove filter">✕</button></span>`).join('')}
       <span class="muted">${plural(list.length, 'flight')} · ${dist(list.reduce((t, f) => t + (f.dist || 0), 0))}</span>
       <div class="spacer"></div><span class="muted">Click a row to edit · <kbd>N</kbd> new · <kbd>/</kbd> search</span></div>
-    <div class="table-wrap"><table><thead><tr>${COLS.map(([k, l, c]) => `<th class="${c || ''} ${key === k ? 'sorted' + (dir > 0 ? ' asc' : '') : ''}" data-act="sort" data-v="${k}">${l}</th>`).join('')}</tr></thead>
-    <tbody>${body || `<tr><td colspan="${COLS.length}" class="empty">No flights match.</td></tr>`}</tbody></table></div>`;
+    <div class="table-wrap"><table><thead><tr><th class="logo-cell" aria-label="Airline logo"></th>${COLS.map(([k, l, c]) => `<th class="${c || ''} ${key === k ? 'sorted' + (dir > 0 ? ' asc' : '') : ''}" data-act="sort" data-v="${k}">${l}</th>`).join('')}</tr></thead>
+    <tbody>${body || `<tr><td colspan="${COLS.length + 1}" class="empty">No flights match.</td></tr>`}</tbody></table></div>`;
   renderYearSelect();
   const s = $('#search');
   s.oninput = () => { clearTimeout(s.t); s.t = setTimeout(() => { state.filter.q = s.value; renderFlights(); }, 150); };
   if (hadFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+}
+
+// ---------- records page
+function renderRecords(list, s) {
+  const page = $('#page-records');
+  const bar = `<div class="toolbar"><select data-year aria-label="Year"></select>
+    <span class="muted">${state.filter.year ? `Records for ${state.filter.year}` : 'All-time records'} · click a record to open the flight</span></div>`;
+  if (!list.length) { page.innerHTML = bar + '<div class="empty">No flights in this period.</div>'; renderYearSelect(); return; }
+
+  const maxBy = (arr, fn) => arr.reduce((b, f) => fn(f) > fn(b) ? f : b, arr[0]);
+  const minBy = (arr, fn) => arr.reduce((b, f) => fn(f) < fn(b) ? f : b, arr[0]);
+  const flown = list.filter(f => f.dist != null && !f.heli);
+  const timed = flown.filter(f => f.dur != null && f.durSource !== 'estimate');
+  // Block speed, ignoring entries the data check flags as impossible.
+  const speed = f => f.dist / (f.dur / 60);
+  const fastest = timed.filter(f => f.dist > 300 && speed(f) < 1000);
+  const route = f => `${fname(f)} ${f.from} → ${f.to} · ${date(f.date)}`;
+  const flightRec = (k, f, value, cls) => f ? { k, cls, f, logo: flightLogo(f, 'lg'), v: value, d: route(f) } : null;
+
+  // Favorites
+  const topAl = byCount(s.airlines)[0], topAc = byCount(s.aircraft)[0], topRt = byCount(s.routes)[0], topAp = byCount(s.airports)[0];
+  const tails = new Map();
+  for (const f of list) if (f.registration) { const t = tails.get(f.registration) || { reg: f.registration, n: 0, f }; t.n++; t.f = f; tails.set(f.registration, t); }
+  const topTail = [...tails.values()].sort((a, b) => b.n - a.n)[0];
+  const seatTop = Object.entries(s.seatType).filter(([k]) => +k).sort((a, b) => b[1] - a[1])[0];
+  const topCountry = [...s.countries.values()].sort((a, b) => b.count - a.count)[0];
+
+  // Calendar
+  const byDay = new Map();
+  for (const f of list) byDay.set(f.date, [...(byDay.get(f.date) || []), f]);
+  const busiestDay = [...byDay.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))[0];
+  const yrs = [...s.years.values()].sort((a, b) => b.count - a.count);
+  const ym = [...s.yearMonth.entries()].sort((a, b) => b[1] - a[1])[0];
+  let gap = null;
+  for (let i = 1; i < list.length; i++) {
+    const days = Math.round((Date.parse(list[i].date) - Date.parse(list[i - 1].date)) / 864e5);
+    if (!gap || days > gap.days) gap = { days, a: list[i - 1], b: list[i] };
+  }
+  const trips = journeys(list);
+  const longTrip = maxBy(trips, j => j.total), mostLegs = maxBy(trips, j => j.legs.length);
+  const perYearCountries = new Map();
+  for (const f of list) for (const c of [f.A.countryName, f.B.countryName]) if (c !== '—') perYearCountries.set(f.year, new Set([...(perYearCountries.get(f.year) || []), c]));
+  const ctyYear = [...perYearCountries.entries()].sort((a, b) => b[1].size - a[1].size)[0];
+
+  // Geography
+  const home = topAp?.a;
+  const far = home && !home.unknown ? maxBy([...s.airports.values()].filter(a => !a.a.unknown), a => haversine(home, a.a)) : null;
+  const north = maxBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
+  const south = minBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
+
+  const sections = [
+    ['Distance & time', 's-blue', [
+      flown.length && flightRec('Longest flight', maxBy(flown, f => f.dist), dist(maxBy(flown, f => f.dist).dist)),
+      flown.length && flightRec('Shortest flight', minBy(flown, f => f.dist), dist(minBy(flown, f => f.dist).dist)),
+      timed.length && flightRec('Longest in the air', maxBy(timed, f => f.dur), dur(maxBy(timed, f => f.dur).dur)),
+      timed.length && flightRec('Shortest in the air', minBy(timed, f => f.dur), dur(minBy(timed, f => f.dur).dur)),
+      fastest.length && flightRec('Fastest average speed', maxBy(fastest, speed), `${n0(state.units === 'mi' ? speed(maxBy(fastest, speed)) / KM_PER_MI : speed(maxBy(fastest, speed)))}<small>${state.units === 'mi' ? 'mph' : 'km/h'}</small>`),
+      longTrip && longTrip.legs.length > 1 && { k: 'Longest journey', f: longTrip.legs[0], v: `${Math.floor(longTrip.total / 60)}<small>h</small> ${longTrip.total % 60}<small>min</small>`,
+        d: `${[longTrip.legs[0].from, ...longTrip.legs.map(f => f.to)].join(' → ')} · door to door`, logo: flightLogo(longTrip.legs[0], 'lg') },
+    ]],
+    ['Favorites', 's-yellow', [
+      topAl && { k: 'Most flown airline', v: esc(topAl.name), d: `${plural(topAl.count, 'flight')} · ${pct(topAl.count, s.count)}% of all · ${dist(topAl.km)}`, logo: airlineLogo(topAl.name, topAl.iata, 'lg'), filter: ['airline', topAl.name] },
+      topAc && { k: 'Most flown aircraft', v: esc(topAc.name || topAc.code), d: `${plural(topAc.count, 'flight')} · ${dist(topAc.km)}`, filter: ['aircraft', topAc.code || topAc.name] },
+      topRt && { k: 'Most flown route', v: `${topRt.a.iata} ⇄ ${topRt.b.iata}`, d: `${plural(topRt.count, 'flight')} · ${esc(topRt.a.city)} – ${esc(topRt.b.city)}`, filter: ['route', topRt.key] },
+      topAp && { k: 'Busiest airport', v: topAp.code, d: `${plural(topAp.count, 'visit')} · ${esc(topAp.a.label)}`, filter: ['airport', topAp.code] },
+      topTail && topTail.n > 1 && { k: 'Most flown aircraft (tail)', v: esc(topTail.reg), d: `${topTail.n} times · ${esc(topTail.f.aircraft)} · ${esc(topTail.f.airline)}`, logo: flightLogo(topTail.f, 'lg') },
+      seatTop && { k: 'Favorite seat', v: SEAT_TYPES[seatTop[0]], d: `${pct(seatTop[1], s.count)}% of flights (${seatTop[1]})` },
+      topCountry && { k: 'Most visited country', v: esc(topCountry.name), d: `${plural(topCountry.count, 'visit')} · ${plural(topCountry.airports.size, 'airport')}` },
+    ]],
+    ['Calendar', 's-purple', [
+      yrs[0] && !state.filter.year && { k: 'Busiest year', v: yrs[0].year, d: `${plural(yrs[0].count, 'flight')} · ${dist(yrs[0].km)}`, act: `data-act="year-pick" data-v="${yrs[0].year}"` },
+      ym && { k: 'Busiest month', v: `${MONTHS[+ym[0].split('-')[1]]} ${ym[0].split('-')[0]}`, d: plural(ym[1], 'flight') },
+      busiestDay && busiestDay[1].length > 1 && { k: 'Most flights in a day', v: `${busiestDay[1].length}<small>flights</small>`, f: busiestDay[1][0],
+        d: `${date(busiestDay[0])} · ${[busiestDay[1][0].from, ...busiestDay[1].map(f => f.to)].join(' → ')}` },
+      gap && gap.days > 0 && { k: 'Longest time on the ground', v: `${gap.days.toLocaleString()}<small>days</small>`, d: `${date(gap.a.date)} → ${date(gap.b.date)}` },
+      mostLegs && mostLegs.legs.length > 2 && { k: 'Most legs in one journey', v: `${mostLegs.legs.length}<small>legs</small>`, f: mostLegs.legs[0], d: [mostLegs.legs[0].from, ...mostLegs.legs.map(f => f.to)].join(' → ') },
+      ctyYear && !state.filter.year && { k: 'Most countries in a year', v: `${ctyYear[1].size}<small>countries</small>`, d: `${ctyYear[0]} · ${[...ctyYear[1]].slice(0, 5).join(', ')}${ctyYear[1].size > 5 ? '…' : ''}` },
+      { ...flightRec('', list[0], date(list[0].date)), k: 'First flight' },
+      { ...flightRec('', list.at(-1), date(list.at(-1).date)), k: 'Most recent flight' },
+    ]],
+    ['Geography', 's-teal', [
+      s.north && { k: 'Farthest north', v: `${s.north.maxLat.toFixed(1)}°N`, f: s.north, d: `over the route ${s.north.from} → ${s.north.to}` },
+      s.south && { k: 'Farthest south', v: `${Math.abs(s.south.minLat).toFixed(1)}°${s.south.minLat < 0 ? 'S' : 'N'}`, f: s.south, d: `over the route ${s.south.from} → ${s.south.to}` },
+      far && far.code !== topAp.code && { k: `Farthest from ${topAp.code}`, v: far.code, d: `${dist(haversine(home, far.a))} away · ${esc(far.a.label)}`, filter: ['airport', far.code] },
+      north && { k: 'Northernmost airport', v: north.code, d: `${north.a.lat.toFixed(1)}° · ${esc(north.a.label)}`, filter: ['airport', north.code] },
+      south && { k: 'Southernmost airport', v: south.code, d: `${south.a.lat.toFixed(1)}° · ${esc(south.a.label)}`, filter: ['airport', south.code] },
+      { k: 'Date line crossings', v: list.filter(f => f.dateline).length, d: 'flights across the International Date Line' },
+    ]],
+  ];
+  const card = r => {
+    const act = r.act || (r.f ? `data-act="edit" data-id="${r.f.id}"` : r.filter ? `data-act="rec-filter" data-k="${r.filter[0]}" data-v="${esc(r.filter[1])}"` : '');
+    return `<div class="rec" ${act}><div class="k">${r.k}</div><div class="main">${r.logo || ''}<div><div class="v">${r.v}</div><div class="d">${r.d}</div></div></div></div>`;
+  };
+  const board = (title, color, rows, val, fmt) => {
+    const top = [...rows].sort((a, b) => val(b) - val(a)).slice(0, 10), max = val(top[0]) || 1;
+    return `<div class="card board"><div class="head" style="background:linear-gradient(180deg,var(--${color}-1),var(--${color}-2))"><h3>${title}</h3></div>
+      ${top.map((f, i) => `<div class="lb-row" data-act="edit" data-id="${f.id}"><span class="rank">${i + 1}</span>${flightLogo(f)}
+        <span class="who"><b>${f.from} → ${f.to}</b> <span class="muted">${esc(fname(f))} · ${f.date}</span></span>
+        <span class="track"><span class="fill" data-w="${val(f) / max * 100}" style="display:block;background:var(--${color}-1)"></span></span>
+        <span class="val">${fmt(f)}</span></div>`).join('')}</div>`;
+  };
+  page.innerHTML = bar + sections.map(([title, cls, recs]) => {
+    const items = recs.filter(r => r && r.v != null && r.v !== '');
+    return items.length ? `<div class="rec-section ${cls}"><div class="section-h">${title}</div><div class="rec-grid">${items.map(card).join('')}</div></div>` : '';
+  }).join('') + `<div class="section-h">Leaderboards</div><div class="boards">
+    ${board('Longest flights', 'blue', flown, f => f.dist, f => dist(f.dist))}
+    ${board('Longest time in the air', 'purple', timed, f => f.dur, f => dur(f.dur))}</div>`;
+  renderYearSelect();
+  setTimeout(() => page.querySelectorAll('.fill[data-w]').forEach(b => { b.style.width = b.dataset.w + '%'; }), 30);
 }
 
 // ---------- data check page
@@ -605,6 +726,7 @@ document.addEventListener('click', e => {
     case 'card-filter': { const card = CARDS.find(c => c.id === el.dataset.card); state.filter[card.filter] = v; go('flights'); break; }
     case 'card-metric': state.cardMetric[el.dataset.card] = v; refresh(); break;
     case 'compare': openCompare(v || el.dataset.card); break;
+    case 'rec-filter': state.filter[el.dataset.k] = v; go('flights'); break;
     case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;
     case 'sort': state.sort = { key: v, dir: state.sort.key === v ? -state.sort.dir : (v === 'sortTime' || v === 'dist' || v === 'dur' ? -1 : 1) }; renderFlights(); break;
