@@ -306,7 +306,10 @@ function renderYearSelect() {
     sel.value = state.filter.year || '';
   }
 }
-document.addEventListener('change', e => { if (e.target.matches('#year, select[data-year]')) setFilter({ year: +e.target.value || null }); });
+document.addEventListener('change', e => {
+  if (e.target.matches('#year, select[data-year]')) setFilter({ year: +e.target.value || null });
+  if (e.target.matches('[data-far]')) { store.set('farFrom', e.target.value); refresh(); }
+});
 
 // ---------- map
 const map = createMap($('#map'), {
@@ -651,8 +654,13 @@ function renderRecords(list, s) {
   const ctyYear = [...perYearCountries.entries()].sort((a, b) => b[1].size - a[1].size)[0];
 
   // Geography
-  const home = topAp?.a;
-  const far = home && !home.unknown ? maxBy([...s.airports.values()].filter(a => !a.a.unknown), a => haversine(home, a.a)) : null;
+  // "Farthest from" is measured from an airport you pick (remembered); defaults to your busiest.
+  const mappable = byCount(s.airports).filter(a => !a.a.unknown);
+  const fromAp = s.airports.get(store.get('farFrom', '')) || topAp;
+  const home = fromAp?.a;
+  const far = home && !home.unknown && mappable.length ? maxBy(mappable, a => haversine(home, a.a)) : null;
+  const farPick = `<select class="far-pick" data-far aria-label="Measure from airport">${mappable.map(a =>
+    `<option value="${a.code}" ${a.code === fromAp?.code ? 'selected' : ''}>${a.code} · ${esc(a.a.city)}</option>`).join('')}</select>`;
   const north = maxBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
   const south = minBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
 
@@ -689,7 +697,7 @@ function renderRecords(list, s) {
     ['Geography', 's-teal', [
       s.north && { k: 'Farthest north', v: `${s.north.maxLat.toFixed(1)}°N`, f: s.north, d: `over the route ${s.north.from} → ${s.north.to}` },
       s.south && { k: 'Farthest south', v: `${Math.abs(s.south.minLat).toFixed(1)}°${s.south.minLat < 0 ? 'S' : 'N'}`, f: s.south, d: `over the route ${s.south.from} → ${s.south.to}` },
-      far && far.code !== topAp.code && { k: `Farthest from ${topAp.code}`, v: far.code, d: `${dist(haversine(home, far.a))} away · ${esc(far.a.label)}`, filter: ['airport', far.code] },
+      far && far.code !== fromAp.code && { k: `Farthest from ${farPick}`, v: far.code, d: `${dist(haversine(home, far.a))} away · ${esc(far.a.label)}`, filter: ['airport', far.code] },
       north && { k: 'Northernmost airport', v: north.code, d: `${north.a.lat.toFixed(1)}° · ${esc(north.a.label)}`, filter: ['airport', north.code] },
       south && { k: 'Southernmost airport', v: south.code, d: `${south.a.lat.toFixed(1)}° · ${esc(south.a.label)}`, filter: ['airport', south.code] },
       { k: 'Date line crossings', v: list.filter(f => f.dateline).length, d: 'flights across the International Date Line' },
@@ -758,7 +766,7 @@ function renderCheck() {
 // ---------- global click handling
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
-  if (!el || el.closest('dialog')) return;
+  if (!el || el.closest('dialog') || e.target.closest('select, input')) return;
   const v = el.dataset.v, act = el.dataset.act;
   switch (act) {
     case 'unfilter': setFilter({ [v]: null }); break;

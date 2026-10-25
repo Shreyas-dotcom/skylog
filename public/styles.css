@@ -283,6 +283,7 @@ td.tail-cell { padding: 3px 4px 3px 12px; width: 44px; }
 .rec[data-act] { cursor: pointer; transition: box-shadow .15s, transform .15s; }
 .rec[data-act]:hover { box-shadow: 0 6px 18px rgba(0, 0, 0, .12); transform: translateY(-1px); }
 .rec .k { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-2); }
+.far-pick { font: 900 11px var(--font); color: var(--ink); border: 1px solid #d5d7dc; border-radius: 4px; padding: 1px 2px; margin-left: 4px; background: #fff; cursor: pointer; max-width: 150px; }
 .rec .main { display: flex; gap: 12px; align-items: center; margin-top: 8px; min-width: 0; }
 .rec .main > div { min-width: 0; }
 .rec .v { font-size: 24px; font-weight: 900; line-height: 1.15; letter-spacing: -.01em; }
