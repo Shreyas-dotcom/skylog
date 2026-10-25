@@ -337,6 +337,8 @@ dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 34
 .field label { font-size: 11px; color: var(--ink-2); font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
 .field input, .field select, .field textarea { border: 1px solid #d5d7dc; background: #fff; border-radius: 4px; padding: 8px 9px; outline: none; width: 100%; min-width: 0; }
 .field input:focus, .field select:focus { border-color: var(--link); box-shadow: 0 0 0 3px rgba(30, 136, 229, .15); }
+/* Example text in empty fields: light and italic so it never looks like a filled-in value. */
+.field input::placeholder, .search::placeholder { color: #c2c5cb; font-style: italic; opacity: 1; }
 .field .hint { font-size: 11.5px; color: var(--muted); min-height: 16px; }
 .field .hint button { border: 0; background: none; color: var(--link); cursor: pointer; padding: 0; font-size: 11.5px; text-decoration: underline; }
 .form-preview { grid-column: span 6; display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 12px; background: #f4f6f9; border-radius: 4px; font-size: 13px; color: var(--ink-2); }
