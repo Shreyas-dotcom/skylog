@@ -1,6 +1,6 @@
 # Creates a "Skylog" Desktop shortcut that opens Skylog.html in its own app window (Chrome or Edge).
 # Right-click this file > "Run with PowerShell". Pass a path to use a different HTML file.
-param([string]$Html = (Join-Path $PSScriptRoot '..\dist\Skylog.html'))
+param([string]$Html = (Join-Path $PSScriptRoot '..\index.html'))
 
 $Html = (Resolve-Path $Html).Path
 $browser = @(

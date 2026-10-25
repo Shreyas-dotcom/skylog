@@ -1,5 +1,7 @@
-# Personal flight data and the personal build that embeds it
+# Personal flight data and the personal offline build that embeds it
 data/
 /Skylog.html
+# Test build for tools/mock-github.mjs
+test/
 *.json.tmp
 node_modules/

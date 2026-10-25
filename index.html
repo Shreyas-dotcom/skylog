@@ -3,474 +3,448 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
   <title>Skylog</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232a78d6' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23333'/><g transform='translate(16 16) rotate(45) translate(-12 -12)'><path fill='%23f5b400' d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z'/></g></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
+/* Skylog: light, card-based theme with colored stat cards and a map-first profile page. */
 :root {
   color-scheme: light;
-  --bg: #f9f9f7;
-  --surface: #fcfcfb;
-  --surface-2: #f2f1ed;
-  --surface-3: #e9e8e2;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.10);
-  --shadow: 0 1px 2px rgba(0, 0, 0, .05), 0 8px 24px rgba(0, 0, 0, .06);
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
-  --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
-  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
-  --good-ink: #006300;
-  --ocean: #e6ecf2;
-  --land: #fcfcfb;
-  --land-edge: #d3d6d9;
-  --visited: #cfe0f5;
-  --route-old: #9ec5f4;
-  --route-new: #104281;
-  --airport: #0b0b0b;
-  --glass: rgba(252, 252, 251, .86);
-  --seq-0: #f2f1ed; --seq-1: #cde2fb; --seq-2: #86b6ef; --seq-3: #3987e5; --seq-4: #1c5cab; --seq-5: #0d366b;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #232321; --surface-3: #2c2c2a;
-    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
-    --border: rgba(255, 255, 255, 0.10);
-    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
-    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
-    --good-ink: #0ca30c;
-    --ocean: #0f1419; --land: #222220; --land-edge: #34342f; --visited: #1d3555;
-    --route-old: #184f95; --route-new: #b7d3f6; --airport: #f0efec;
-    --glass: rgba(26, 26, 25, .84);
-    --seq-0: #232321; --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #6da7ec; --seq-5: #b7d3f6;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #232321; --surface-3: #2c2c2a;
-  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
-  --border: rgba(255, 255, 255, 0.10);
-  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
-  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
-  --good-ink: #0ca30c;
-  --ocean: #0f1419; --land: #222220; --land-edge: #34342f; --visited: #1d3555;
-  --route-old: #184f95; --route-new: #b7d3f6; --airport: #f0efec;
-  --glass: rgba(26, 26, 25, .84);
-  --seq-0: #232321; --seq-1: #104281; --seq-2: #1c5cab; --seq-3: #2a78d6; --seq-4: #6da7ec; --seq-5: #b7d3f6;
+  --page: #ebedf0;
+  --white: #fff;
+  --ink: #333;
+  --ink-2: #666;
+  --muted: #999;
+  --line: #e3e4e8;
+  --accent: #f5b400;
+  --link: #1e88e5;
+  --shadow: 0 1px 3px rgba(0, 0, 0, .08);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, .25);
+  /* card colors */
+  --green-1: #95c93d; --green-2: #7fb92f;
+  --yellow-1: #fbbd19; --yellow-2: #f6a81c;
+  --red-1: #ec5040; --red-2: #de3a2e;
+  --purple-1: #a0449b; --purple-2: #80307f;
+  --teal-1: #22aaa2; --teal-2: #15928b;
+  --blue-1: #9dcdf4; --blue-2: #77b6ec;
+  --pink-1: #f0bedd; --pink-2: #e6a2cd;
+  /* route frequency */
+  --f1: #fbc02d; --f2: #fb8c00; --f3: #e53935; --f4: #8e1010;
+  /* map */
+  --water: #aad3f5; --land: #f3f0e9; --land-edge: #cfc8b8; --visited: #ece4cf; --label: #8a8577;
+  --pin: #e53935; --pin-edge: #9c1c18;
+  /* status */
+  --good: #2e9e44; --warning: #f5a623; --critical: #d63b30;
+  --font: "Lato", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body {
-  background: var(--bg); color: var(--ink);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
+body { background: var(--page); color: var(--ink); font: 14px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
 button, input, select, textarea { font: inherit; color: inherit; }
-a { color: var(--s1); }
+a { color: var(--link); text-decoration: none; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
-.ink2 { color: var(--ink-2); }
 .num { font-variant-numeric: tabular-nums; }
 .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .92em; }
+.rainbow { height: 4px; background: linear-gradient(90deg,
+  var(--green-1) 0 20%, var(--yellow-1) 20% 40%, var(--red-1) 40% 60%, var(--purple-1) 60% 80%, var(--teal-1) 80% 100%); }
 
-/* ---------- top bar */
-.topbar {
-  position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+/* ---------- header */
+.hdr { position: sticky; top: 0; z-index: 30; background: var(--white); border-bottom: 3px solid var(--accent); box-shadow: var(--shadow); }
+.hdr-in { max-width: 1600px; margin: 0 auto; display: flex; align-items: center; gap: 18px; padding: 0 20px; height: 56px; }
+.logo { display: flex; align-items: center; gap: 8px; font-size: 20px; color: var(--ink); letter-spacing: -.01em; }
+.logo .mark { width: 30px; height: 30px; border-radius: 8px; background: var(--ink); display: grid; place-items: center; }
+.logo .mark svg { width: 18px; height: 18px; color: var(--accent); transform: rotate(45deg); }
+.logo b { font-weight: 900; }
+.nav { display: flex; gap: 2px; margin-left: 12px; align-self: stretch; }
+.nav button {
+  border: 0; background: none; padding: 0 14px; cursor: pointer; color: var(--ink-2); font-weight: 700;
+  font-size: 13px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 3px solid transparent; margin-bottom: -3px;
 }
-.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
-.brand svg { width: 22px; height: 22px; color: var(--s1); }
-.save-state { font-size: 12px; color: var(--muted); min-width: 64px; }
-.save-state.err { color: var(--critical); }
+.nav button:hover { color: var(--ink); }
+.nav button[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+.badge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 5px; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: var(--warning); color: #fff; }
 .spacer { flex: 1; }
-.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.btn {
-  border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
-  padding: 6px 12px; cursor: pointer; white-space: nowrap; line-height: 1.3;
+.sync { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.sync.err { color: var(--critical); font-weight: 700; }
+.sync.ok::before { content: "● "; color: var(--good); }
+.btn-add {
+  border: 2px solid var(--link); color: var(--link); background: var(--white); border-radius: 18px; padding: 5px 16px;
+  font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; cursor: pointer; white-space: nowrap;
 }
-.btn:hover { background: var(--surface-2); }
-.btn.primary { background: var(--s1); border-color: transparent; color: #fff; font-weight: 600; }
-.btn.primary:hover { filter: brightness(1.08); }
+.btn-add:hover { background: var(--link); color: #fff; }
+.icon-btn { border: 0; background: none; width: 36px; height: 36px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; }
+.icon-btn:hover { background: var(--page); }
+.icon-btn svg { width: 22px; height: 22px; }
+
+.btn { border: 1px solid #d5d7dc; background: var(--white); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 700; white-space: nowrap; }
+.btn:hover { background: #f5f6f8; }
+.btn.primary { background: var(--link); border-color: var(--link); color: #fff; }
+.btn.primary:hover { filter: brightness(1.06); }
 .btn.danger { color: var(--critical); }
-.btn.small { padding: 3px 9px; font-size: 12.5px; }
-.btn.ghost { border-color: transparent; background: transparent; }
-.btn.ghost:hover { background: var(--surface-2); }
-.btn.warn { border-color: var(--warning); background: color-mix(in oklab, var(--warning) 18%, var(--surface)); }
-#btn-backup { color: var(--ink-2); font-size: 12px; }
-.btn[aria-pressed="true"] { background: var(--surface-3); font-weight: 600; }
-.search {
-  border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px;
-  padding: 6px 10px; width: 220px; outline: none;
-}
-.search:focus { border-color: var(--s1); background: var(--surface); }
+.btn.small { padding: 4px 10px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.pill { border: 0; border-radius: 12px; padding: 3px 10px; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; background: #e4e5e8; color: #8b8d93; }
+.pill.on { background: #a8aab0; color: #fff; }
 
-/* ---------- filter row */
-.filterbar {
-  display: flex; align-items: center; gap: 10px; padding: 8px 20px; overflow-x: auto;
-  background: var(--surface); border-bottom: 1px solid var(--border); scrollbar-width: thin;
-}
-.chips { display: flex; gap: 4px; }
-.chip {
-  border: 1px solid transparent; background: transparent; border-radius: 999px; padding: 3px 10px;
-  cursor: pointer; white-space: nowrap; color: var(--ink-2); font-size: 13px;
-}
-.chip:hover { background: var(--surface-2); }
-.chip.on { background: var(--ink); color: var(--surface); font-weight: 600; }
-.chip .c { color: var(--muted); font-size: 11px; margin-left: 4px; }
-.chip.on .c { color: inherit; opacity: .7; }
-.pill {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 999px;
-  background: color-mix(in oklab, var(--s1) 14%, var(--surface)); border: 1px solid color-mix(in oklab, var(--s1) 35%, transparent);
-  font-size: 13px; white-space: nowrap;
-}
-.pill button { border: 0; background: transparent; cursor: pointer; border-radius: 50%; width: 20px; height: 20px; line-height: 1; color: var(--ink-2); }
-.pill button:hover { background: var(--surface-3); }
+.menu { position: absolute; z-index: 60; background: var(--white); border-radius: 8px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 240px; }
+.menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 6px; cursor: pointer; }
+.menu button:hover { background: var(--page); }
+.menu small { display: block; color: var(--muted); font-size: 11.5px; }
+.menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 
-/* ---------- map hero */
-.hero { position: relative; height: min(62vh, 640px); min-height: 360px; background: var(--ocean); overflow: hidden; }
+/* ---------- map */
+.mapwrap { position: relative; height: min(64vh, 680px); min-height: 380px; background: var(--water); overflow: hidden; }
+.mapwrap.globe { background: radial-gradient(ellipse at center, #1b2430 0%, #0d1117 70%); }
 .map { position: absolute; inset: 0; touch-action: none; cursor: grab; }
 .map.dragging { cursor: grabbing; }
 .map svg { display: block; width: 100%; height: 100%; }
-.map .land { fill: var(--land); stroke: var(--land-edge); stroke-width: .5; }
+.map .sphere { fill: var(--water); }
+.map .graticule { fill: none; stroke: none; }
+.map .land { fill: var(--land); stroke: var(--land-edge); stroke-width: .6; }
 .map .land.visited { fill: var(--visited); }
-.map .sphere { fill: var(--ocean); }
-.map .graticule { fill: none; stroke: var(--land-edge); stroke-width: .4; stroke-opacity: .5; }
+.map .country-label { font: italic 600 10.5px var(--font); fill: var(--label); text-anchor: middle; pointer-events: none; letter-spacing: .02em; }
 .map .route { fill: none; stroke-linecap: round; pointer-events: none; }
 .map .route-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
-.map .route.hl { stroke: var(--s2) !important; stroke-opacity: 1 !important; }
-.map .dim .route { stroke-opacity: .12 !important; }
-.map .airport { fill: var(--airport); stroke: var(--ocean); stroke-width: 2; cursor: pointer; paint-order: stroke; }
-.map .airport.hl { fill: var(--s2); }
-.map .ap-label { font-size: 11px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--ocean); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
-.map .replay-trail { fill: none; stroke: var(--s2); stroke-width: 1.6; stroke-linecap: round; }
-.map .replay-done { fill: none; stroke: var(--s1); stroke-width: 1.2; stroke-opacity: .55; }
-.map .plane { fill: var(--s2); stroke: var(--ocean); stroke-width: 1.5; paint-order: stroke; }
+.map .route.hl { stroke: #1e88e5 !important; stroke-width: 3.5px !important; }
+.map .dim .route { stroke-opacity: .18 !important; }
+.map .pin { cursor: pointer; }
+.map .pin path { fill: var(--pin); stroke: var(--pin-edge); stroke-width: 1; }
+.map .pin circle { fill: #fff; }
+.map .pin.hl path { fill: #1e88e5; stroke: #0d5aa7; }
+.map .ap-label { font: 800 10.5px var(--font); fill: #333; paint-order: stroke; stroke: rgba(255, 255, 255, .9); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.map .replay-trail { fill: none; stroke: #1e88e5; stroke-width: 2.4; stroke-linecap: round; }
+.map .replay-done { fill: none; stroke-width: 1.6; stroke-opacity: .85; }
+.map .plane { fill: #1e88e5; stroke: #fff; stroke-width: 1.5; paint-order: stroke; }
+/* Globe keeps its dark look */
+.globe .map .sphere { fill: #0f1419; }
+.globe .map .graticule { stroke: #34342f; stroke-width: .4; stroke-opacity: .6; }
+.globe .map .land { fill: #222220; stroke: #34342f; }
+.globe .map .land.visited { fill: #1d3555; }
+.globe .map .country-label { display: none; }
+.globe .map .ap-label { fill: #f0efec; stroke: #0f1419; }
+.globe .map .pin path { stroke: #0f1419; }
 
-.hud {
-  position: absolute; left: 16px; top: 16px; display: flex; gap: 0; background: var(--glass);
-  backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow);
-  pointer-events: none; max-width: calc(100% - 32px); overflow: hidden;
-}
-.hud .stat { padding: 10px 16px; border-right: 1px solid var(--border); }
-.hud .stat:last-child { border-right: 0; }
-.hud .v { font-size: 20px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
-.hud .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
-.map-controls {
-  position: absolute; right: 16px; top: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
-}
-.seg { display: inline-flex; background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 9px; padding: 2px; box-shadow: var(--shadow); }
-.seg button { border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
-.seg button:hover { color: var(--ink); }
-.seg button[aria-pressed="true"] { background: var(--surface-3); color: var(--ink); font-weight: 600; }
-.legend {
-  position: absolute; left: 16px; bottom: 16px; background: var(--glass); backdrop-filter: blur(10px);
-  border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: var(--ink-2); box-shadow: var(--shadow);
-}
-.legend .ramp { width: 160px; height: 8px; border-radius: 4px; margin: 4px 0 2px; }
-.legend .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+.map-ctrl { position: absolute; right: 14px; top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.seg { display: inline-flex; background: var(--white); border-radius: 6px; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); overflow: hidden; }
+.seg button { border: 0; background: none; padding: 7px 12px; cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button:hover { background: #f4f5f7; color: var(--ink); }
+.seg button[aria-pressed="true"] { color: var(--ink); background: #eceef1; }
+.legend { position: absolute; left: 14px; bottom: 14px; background: var(--white); border-radius: 6px; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); padding: 7px 12px; font-size: 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; max-width: calc(100% - 28px); }
+.legend b { font-weight: 800; color: var(--ink-2); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.legend i { width: 18px; height: 4px; border-radius: 2px; display: inline-block; }
 .replay {
-  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); width: min(560px, calc(100% - 32px));
-  background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px;
-  padding: 10px 14px; box-shadow: var(--shadow); display: grid; grid-template-columns: auto 1fr auto; gap: 6px 12px; align-items: center;
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(560px, calc(100% - 28px));
+  background: var(--white); border-radius: 8px; box-shadow: var(--shadow-lg); padding: 10px 14px;
+  display: grid; grid-template-columns: auto 1fr auto; gap: 6px 12px; align-items: center;
 }
-.replay .now { font-weight: 700; font-size: 15px; }
+.replay .now { font-weight: 900; font-size: 15px; }
 .replay .leg { color: var(--ink-2); font-size: 13px; }
-.replay .bar { grid-column: 1 / -1; height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
-.replay .bar i { display: block; height: 100%; background: var(--s2); width: 0; }
+.replay .bar { grid-column: 1 / -1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.replay .bar i { display: block; height: 100%; background: #1e88e5; width: 0; }
 .replay .ctrl { display: flex; gap: 4px; }
 
-.tooltip {
-  position: fixed; z-index: 100; pointer-events: none; background: var(--surface); color: var(--ink);
-  border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; box-shadow: var(--shadow);
-  max-width: 300px; opacity: 0; transition: opacity .08s;
-}
-.tooltip.on { opacity: 1; }
-.tooltip b { font-weight: 650; }
-.tooltip .t-sub { color: var(--muted); font-size: 11.5px; }
+/* ---------- stats strip */
+.strip { background: var(--white); box-shadow: var(--shadow); }
+.strip-in { max-width: 1600px; margin: 0 auto; display: flex; align-items: stretch; }
+.avatar { width: 150px; flex: none; background: #2b2b2b; display: grid; place-items: center; }
+.avatar div { width: 64px; height: 64px; border-radius: 50%; background: #e9e9e9; display: grid; place-items: center; overflow: hidden; }
+.avatar svg { width: 54px; height: 54px; margin-top: 14px; color: #bdbdbd; }
+.big-stats { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); padding: 16px 8px; }
+.big { padding: 4px 20px; min-width: 0; }
+.big .v { font-size: 32px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; }
+.big .v small { font-size: 20px; font-weight: 400; margin-left: 3px; }
+.big .s { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.big .s b { color: var(--ink); }
+.year-select { align-self: flex-start; margin: 14px 18px 0 0; }
+.year-select select { border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; background: #fff; font-size: 13px; }
 
-/* ---------- tabs & layout */
-.tabs {
-  display: flex; gap: 2px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--border);
-  overflow-x: auto; position: sticky; top: var(--topbar-h, 53px); z-index: 15; scrollbar-width: none;
-}
-.tab {
-  border: 0; background: transparent; padding: 12px 14px; cursor: pointer; color: var(--ink-2);
-  border-bottom: 2px solid transparent; white-space: nowrap; font-weight: 500;
-}
-.tab:hover { color: var(--ink); }
-.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 650; }
-.badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 11px; line-height: 18px; text-align: center; background: var(--surface-3); color: var(--ink-2); margin-left: 4px; }
-.badge.warn { background: color-mix(in oklab, var(--warning) 30%, var(--surface)); color: var(--ink); }
+.pies { background: var(--white); border-top: 1px solid var(--line); }
+.pies-in { max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); padding: 14px 20px 18px; gap: 16px; }
+.pie-block h4 { margin: 0 0 8px; font-size: 12px; font-weight: 900; letter-spacing: .03em; text-transform: uppercase; }
+.pie-row { display: flex; gap: 14px; align-items: center; }
+.pie-row svg { width: 74px; height: 74px; flex: none; }
+.pie-row svg path { stroke: #fff; stroke-width: .025; }
+.pie-legend { font-size: 12.5px; line-height: 1.45; }
+.pie-legend b { font-weight: 900; display: inline-block; min-width: 26px; }
+.pie-legend .z { color: var(--muted); }
 
-main { padding: 20px; max-width: 1400px; margin: 0 auto; }
-.grid { display: grid; gap: 16px; }
-.g-tiles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.g-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); }
-.g-3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; min-width: 0; }
-.card h3 { margin: 0 0 2px; font-size: 14px; font-weight: 650; }
-.card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; }
-.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 12px; }
-.card-head h3 { margin: 0; }
-.section-title { margin: 28px 0 12px; font-size: 13px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.section-title:first-child { margin-top: 0; }
+/* ---------- pages */
+.page { max-width: 1600px; margin: 0 auto; padding: 20px; }
+.section-h { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); margin: 6px 0 12px; }
+.cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--white); border-radius: 4px; box-shadow: var(--shadow); overflow: hidden; min-width: 0; }
+.top-card .head { color: #fff; padding: 12px 16px 14px; position: relative; }
+.top-card .head h3 { margin: 0 0 10px; text-align: center; font-size: 12px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.top-card .expand { position: absolute; right: 8px; top: 8px; border: 0; background: none; color: rgba(255, 255, 255, .85); cursor: pointer; width: 26px; height: 26px; border-radius: 4px; display: grid; place-items: center; }
+.top-card .expand:hover { background: rgba(255, 255, 255, .2); color: #fff; }
+.top-card .rows { display: flex; flex-direction: column; gap: 5px; min-height: 172px; }
+.top-card .row { display: grid; grid-template-columns: 62px 1fr; gap: 8px; align-items: center; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 3px; }
+.top-card .row:hover { background: rgba(255, 255, 255, .14); }
+.top-card .row .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-card .row .barcell { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.top-card .row .bar { height: 7px; background: rgba(255, 255, 255, .95); border-radius: 1px; width: 0; transition: width .7s cubic-bezier(.2, .8, .2, 1); flex: none; max-width: calc(100% - 34px); }
+.top-card .row .n { font-size: 11px; opacity: .95; }
+.top-card .foot { padding: 14px 16px 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.top-card .foot .v { font-size: 30px; font-weight: 900; line-height: 1; }
+.top-card .foot .k { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+.top-card .toggles { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.c-green .head { background: linear-gradient(180deg, var(--green-1), var(--green-2)); }
+.c-yellow .head { background: linear-gradient(180deg, var(--yellow-1), var(--yellow-2)); }
+.c-red .head { background: linear-gradient(180deg, var(--red-1), var(--red-2)); }
+.c-purple .head { background: linear-gradient(180deg, var(--purple-1), var(--purple-2)); }
+.c-teal .head { background: linear-gradient(180deg, var(--teal-1), var(--teal-2)); }
 
-.tile .v { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; }
-.tile .k { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
-.tile .x { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.trend { margin-top: 16px; }
+.trend .head { padding: 12px 16px 6px; color: #fff; }
+.trend .head h3 { margin: 0; text-align: center; font-size: 12px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; }
+.trend.blue .head, .trend.blue .plot { background: linear-gradient(180deg, var(--blue-1), var(--blue-2)); }
+.trend.pink .head, .trend.pink .plot { background: linear-gradient(180deg, var(--pink-1), var(--pink-2)); }
+.trend .plot { padding: 0 16px 10px; }
+.trend svg { display: block; width: 100%; overflow: visible; }
+.trend svg .grid { stroke: rgba(255, 255, 255, .35); stroke-width: 1; }
+.trend svg .area { fill: rgba(255, 255, 255, .22); }
+.trend svg .line { fill: none; stroke: #fff; stroke-width: 2.5; stroke-linejoin: round; }
+.trend svg .dot { fill: #fff; transition: r .12s; }
+.trend svg .hit { fill: transparent; cursor: pointer; }
+.trend svg .hit:hover + .dot, .trend svg .dot.sel { r: 6.5; }
+.trend svg text { fill: rgba(255, 255, 255, .95); font: 700 10.5px var(--font); }
+.trend .foot { padding: 12px 16px 14px; }
+.trend .foot .v { font-size: 30px; font-weight: 900; line-height: 1; }
+.trend .foot .k { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+.trend-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.review {
-  background: linear-gradient(135deg, color-mix(in oklab, var(--s1) 16%, var(--surface)), var(--surface) 60%);
-  border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px;
-}
-.review h2 { margin: 0 0 4px; font-size: 24px; letter-spacing: -.02em; }
-.review .lede { color: var(--ink-2); margin-bottom: 14px; font-size: 15px; }
-.review .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px 24px; }
-.review .cols .k { font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
-.tagrow { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag { display: inline-block; padding: 1px 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); font-size: 12.5px; }
-button.tag { cursor: pointer; }
-button.tag:hover { border-color: var(--s1); }
+/* comparison pop-up */
+.compare { width: min(760px, calc(100vw - 32px)); }
+.compare .head { color: #fff; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+.compare .head h2 { margin: 0; font-size: 15px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; flex: 1; }
+.compare .head .x { border: 0; background: rgba(255, 255, 255, .2); color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 15px; }
+.compare .metrics { display: flex; gap: 6px; }
+.compare .metrics .pill { background: rgba(255, 255, 255, .25); color: #fff; }
+.compare .metrics .pill.on { background: #fff; color: var(--ink); }
+.compare .body { padding: 14px 20px 18px; max-height: min(70vh, 640px); overflow: auto; }
+.cmp-row { display: grid; grid-template-columns: minmax(120px, 34%) 1fr 92px; gap: 12px; align-items: center; padding: 5px 6px; margin: 0 -6px; border-radius: 4px; cursor: pointer; }
+.cmp-row:hover { background: #f4f5f7; }
+.cmp-row .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.cmp-row .lbl b { font-weight: 900; margin-right: 6px; }
+.cmp-row .track { height: 16px; background: #f0f1f3; border-radius: 2px; overflow: hidden; }
+.cmp-row .fill { height: 100%; width: 0; border-radius: 2px; transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.cmp-row .val { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cmp-row .val small { color: var(--muted); margin-left: 4px; }
+dialog.pop[open] { animation: pop .22s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes pop { from { transform: scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
 
-.records { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0; }
-.record { padding: 10px 0; border-bottom: 1px solid var(--grid); display: flex; gap: 12px; align-items: baseline; padding-right: 16px; }
-.record .k { color: var(--muted); font-size: 12px; width: 120px; flex: none; }
-.record .v { font-weight: 600; }
-.record .d { color: var(--ink-2); font-size: 12.5px; }
-
-/* ---------- charts (plain HTML) */
-.cols-chart { display: flex; align-items: flex-end; gap: 2px; height: 160px; padding-top: 18px; border-bottom: 1px solid var(--axis); position: relative; }
-.cols-chart .col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; cursor: default; min-width: 0; }
-.cols-chart .col.click { cursor: pointer; }
-.cols-chart .bar { width: min(100%, 36px); background: var(--s1); border-radius: 4px 4px 0 0; min-height: 0; transition: filter .1s; }
-.cols-chart .col:hover .bar { filter: brightness(1.15) saturate(1.1); }
-.cols-chart .col.sel .bar { background: var(--s2); }
-.cols-chart .col.faded .bar { opacity: .35; }
-.cols-chart .val { font-size: 11px; color: var(--ink-2); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-.cols-axis { display: flex; gap: 2px; margin-top: 5px; }
-.cols-axis span { flex: 1; text-align: center; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden; }
-.gridline { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--grid); pointer-events: none; }
-
-.hbars { display: flex; flex-direction: column; gap: 2px; }
-.hbar { display: grid; grid-template-columns: minmax(90px, 38%) 1fr 54px; align-items: center; gap: 10px; padding: 4px 6px; margin: 0 -6px; border-radius: 6px; cursor: pointer; }
-.hbar:hover { background: var(--surface-2); }
-.hbar .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.hbar .lbl .muted { font-size: 12px; }
-.hbar .track { height: 10px; }
-.hbar .fill { height: 100%; background: var(--s1); border-radius: 0 4px 4px 0; min-width: 2px; }
-.hbar .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 12.5px; }
-.more { margin-top: 8px; }
-
-.stack { display: flex; height: 14px; gap: 2px; margin: 8px 0 8px; }
-.stack div { height: 100%; min-width: 3px; }
-.stack div:first-child { border-radius: 4px 0 0 4px; }
-.stack div:last-child { border-radius: 0 4px 4px 0; }
-.stack div:only-child { border-radius: 4px; }
-.keys { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--ink-2); }
-.keys span { display: inline-flex; align-items: center; gap: 6px; }
-.keys i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-.keys b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
-.split + .split { margin-top: 16px; }
-.split .name { font-size: 12.5px; font-weight: 600; }
-
-.heat { display: grid; gap: 2px; font-size: 11px; }
-.heat .h { color: var(--muted); text-align: center; }
-.heat .y { color: var(--muted); text-align: right; padding-right: 6px; font-variant-numeric: tabular-nums; cursor: pointer; }
-.heat .y:hover { color: var(--ink); }
-.heat .c { aspect-ratio: 1.6; border-radius: 3px; background: var(--seq-0); min-height: 14px; }
-.heat-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 10px; }
-.heat-legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
-
-/* ---------- tables */
-.table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); max-height: 75vh; }
+/* ---------- flights table */
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.search { border: 1px solid #d5d7dc; background: var(--white); border-radius: 6px; padding: 7px 10px; width: 260px; outline: none; }
+.search:focus { border-color: var(--link); }
+.chipf { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border-radius: 14px; background: #dfe9f7; font-size: 12.5px; font-weight: 700; }
+.chipf button { border: 0; background: none; cursor: pointer; width: 20px; height: 20px; border-radius: 50%; }
+.chipf button:hover { background: rgba(0, 0, 0, .08); }
+.table-wrap { overflow: auto; background: var(--white); border-radius: 4px; box-shadow: var(--shadow); max-height: calc(100vh - 170px); }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th, td { padding: 7px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--grid); }
-th { position: sticky; top: 0; background: var(--surface); z-index: 1; font-weight: 600; color: var(--ink-2); font-size: 12px; cursor: pointer; user-select: none; box-shadow: inset 0 -1px 0 var(--axis); }
+th, td { padding: 8px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+th { position: sticky; top: 0; background: #f7f8fa; z-index: 1; font-weight: 900; color: var(--ink-2); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; cursor: pointer; user-select: none; }
 th:hover { color: var(--ink); }
-th.sorted::after { content: " ↓"; color: var(--s1); }
-th.sorted.asc::after { content: " ↑"; }
+th.sorted::after { content: " ▾"; }
+th.sorted.asc::after { content: " ▴"; }
 td.r, th.r { text-align: right; }
 tbody tr { cursor: pointer; }
-tbody tr:hover { background: var(--surface-2); }
-tr.year-sep td { background: var(--surface-2); font-weight: 650; color: var(--ink-2); font-size: 12px; cursor: default; padding: 5px 10px; }
+tbody tr:hover { background: #f6f9fe; }
+tr.year-sep td { background: #f1f2f4; font-weight: 900; color: var(--ink-2); font-size: 12px; cursor: default; }
 .est { color: var(--muted); }
 .flag-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
-.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-.toolbar .count { color: var(--ink-2); }
 
-/* ---------- achievements */
-.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-.ach { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-.ach .ic { font-size: 26px; line-height: 1; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: var(--surface-2); flex: none; }
-.ach.locked .ic { filter: grayscale(1); opacity: .45; }
-.ach.locked .t { color: var(--ink-2); }
-.ach .t { font-weight: 650; }
-.ach .d { color: var(--muted); font-size: 12.5px; }
-.ach .prog { height: 4px; background: var(--surface-3); border-radius: 2px; margin-top: 8px; overflow: hidden; }
-.ach .prog i { display: block; height: 100%; background: var(--s1); }
-.ach .got { color: var(--good-ink); font-size: 12px; font-weight: 600; margin-top: 4px; }
-
-/* ---------- health */
-.issue { display: grid; grid-template-columns: 92px 1fr auto; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--grid); align-items: start; }
+/* ---------- data check */
+.issue { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); align-items: start; }
 .issue:last-child { border-bottom: 0; }
-.sev { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
-.sev i { width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 11px; color: #fff; font-weight: 800; }
+.sev { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.sev i { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-style: normal; font-size: 11px; color: #fff; }
 .sev.error i { background: var(--critical); }
-.sev.warn i { background: var(--warning); color: #0b0b0b; }
-.sev.info i { background: var(--muted); }
-.issue .t { font-weight: 600; }
+.sev.warn i { background: var(--warning); }
+.sev.info i { background: #9aa0a6; }
+.issue .t { font-weight: 900; }
 .issue .d { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
 .issue .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.meter { height: 8px; background: var(--surface-3); border-radius: 4px; overflow: hidden; margin-top: 6px; }
-.meter i { display: block; height: 100%; background: var(--s1); border-radius: 4px; }
-
-/* ---------- journeys */
-.journey { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--grid); align-items: center; cursor: pointer; }
-.journey:hover { background: var(--surface-2); }
-.journey .legs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.journey .legs .code { font-weight: 650; font-family: ui-monospace, Consolas, monospace; }
-.journey .legs .arrow { color: var(--muted); font-size: 12px; }
-.journey .meta { text-align: right; color: var(--ink-2); font-size: 12.5px; }
+.tagrow { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #f1f2f4; border: 1px solid var(--line); font-size: 12px; cursor: pointer; }
+.tag:hover { border-color: var(--link); }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { border: 0; background: #e4e5e8; border-radius: 14px; padding: 4px 12px; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.chip.on { background: var(--ink); color: #fff; }
+.empty { text-align: center; padding: 48px 16px; color: var(--ink-2); }
 
 /* ---------- dialogs & forms */
-dialog { border: 1px solid var(--border); border-radius: 14px; padding: 0; background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0, 0, 0, .3); width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
-dialog::backdrop { background: rgba(0, 0, 0, .45); }
-dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 34px); }
-.dlg-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.dlg-head h2 { margin: 0; font-size: 17px; }
+dialog { border: 0; border-radius: 6px; padding: 0; background: var(--white); color: var(--ink); box-shadow: var(--shadow-lg); width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+dialog::backdrop { background: rgba(20, 22, 26, .55); }
+dialog form { display: flex; flex-direction: column; max-height: calc(100vh - 34px); margin: 0; }
+.dlg-head { padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.dlg-head h2 { margin: 0; font-size: 17px; font-weight: 900; }
 .dlg-body { padding: 16px 20px; overflow: auto; }
-.dlg-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center; }
+.dlg-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; gap: 8px; align-items: center; background: #fafbfc; }
+.x-btn { border: 0; background: none; font-size: 18px; cursor: pointer; color: var(--muted); width: 32px; height: 32px; border-radius: 50%; }
+.x-btn:hover { background: var(--page); color: var(--ink); }
 .form-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 4px; grid-column: span 2; min-width: 0; }
-.field.w1 { grid-column: span 1; } .field.w3 { grid-column: span 3; } .field.w4 { grid-column: span 4; } .field.w6 { grid-column: span 6; }
-.field label { font-size: 12px; color: var(--ink-2); font-weight: 500; }
-.field input, .field select, .field textarea {
-  border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 7px 9px; outline: none; width: 100%; min-width: 0;
-}
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--s1); background: var(--surface); }
+.field.w1 { grid-column: span 1; } .field.w3 { grid-column: span 3; } .field.w6 { grid-column: span 6; }
+.field label { font-size: 11px; color: var(--ink-2); font-weight: 900; text-transform: uppercase; letter-spacing: .04em; }
+.field input, .field select, .field textarea { border: 1px solid #d5d7dc; background: #fff; border-radius: 4px; padding: 8px 9px; outline: none; width: 100%; min-width: 0; }
+.field input:focus, .field select:focus { border-color: var(--link); box-shadow: 0 0 0 3px rgba(30, 136, 229, .15); }
 .field .hint { font-size: 11.5px; color: var(--muted); min-height: 16px; }
-.field .hint button { border: 0; background: none; color: var(--s1); cursor: pointer; padding: 0; font-size: 11.5px; text-decoration: underline; }
-.form-preview { grid-column: span 6; display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; font-size: 13px; color: var(--ink-2); }
+.field .hint button { border: 0; background: none; color: var(--link); cursor: pointer; padding: 0; font-size: 11.5px; text-decoration: underline; }
+.form-preview { grid-column: span 6; display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 12px; background: #f4f6f9; border-radius: 4px; font-size: 13px; color: var(--ink-2); }
 .form-preview b { color: var(--ink); }
-.drop { border: 2px dashed var(--axis); border-radius: 12px; padding: 28px; text-align: center; color: var(--ink-2); cursor: pointer; }
-.drop.over { border-color: var(--s1); background: color-mix(in oklab, var(--s1) 8%, var(--surface)); }
+.drop { display: block; border: 2px dashed #c9ccd2; border-radius: 6px; padding: 28px; text-align: center; color: var(--ink-2); cursor: pointer; }
+.drop.over { border-color: var(--link); background: #f1f7fe; }
 .radio-row { display: flex; gap: 16px; margin: 14px 0 4px; flex-wrap: wrap; }
 .radio-row label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
-.import-summary { margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; font-size: 13px; }
-.menu { position: absolute; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 4px; z-index: 50; min-width: 220px; }
-.menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
-.menu button:hover { background: var(--surface-2); }
-.menu small { display: block; color: var(--muted); }
+.note { margin-top: 12px; padding: 10px 12px; background: #f4f6f9; border-radius: 4px; font-size: 13px; }
+.note.warn { background: #fff6e0; }
 
+/* ---------- lock / setup screen */
+.gate { position: fixed; inset: 0; z-index: 100; background: var(--page); display: grid; place-items: center; padding: 16px; overflow: auto; }
+.gate-card { width: min(440px, 100%); background: var(--white); border-radius: 6px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.gate-card .top { padding: 26px 28px 10px; text-align: center; }
+.gate-card .top .logo { justify-content: center; font-size: 24px; }
+.gate-card .top p { color: var(--ink-2); margin: 10px 0 0; }
+.gate-card form { padding: 12px 28px 26px; display: flex; flex-direction: column; gap: 12px; }
+.gate-card .field { grid-column: auto; }
+.gate-card .err { color: var(--critical); font-size: 13px; font-weight: 700; min-height: 18px; }
+.gate-card .check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.gate-card .small { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.strength { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.strength i { display: block; height: 100%; width: 0; transition: width .2s, background .2s; }
+
+.tooltip { position: fixed; z-index: 200; pointer-events: none; background: rgba(30, 30, 30, .94); color: #fff; border-radius: 4px; padding: 6px 9px; font-size: 12px; max-width: 300px; opacity: 0; transition: opacity .08s; }
+.tooltip.on { opacity: 1; }
+.tooltip b { font-weight: 900; }
+.tooltip .t-sub { color: #c9c9c9; font-size: 11.5px; }
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none;
-  background: var(--ink); color: var(--surface); padding: 10px 14px; border-radius: 10px; box-shadow: var(--shadow); z-index: 200;
+  background: #2b2b2b; color: #fff; padding: 10px 14px; border-radius: 6px; box-shadow: var(--shadow-lg); z-index: 250;
   display: flex; gap: 12px; align-items: center; transition: all .18s; max-width: calc(100vw - 32px);
 }
 .toast.on { opacity: 1; transform: translateX(-50%); pointer-events: auto; }
-.toast button { background: transparent; border: 1px solid color-mix(in oklab, var(--surface) 40%, transparent); color: inherit; border-radius: 6px; padding: 2px 10px; cursor: pointer; }
-.empty { text-align: center; padding: 48px 16px; color: var(--ink-2); }
-kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; color: var(--muted); }
+.toast button { background: none; border: 1px solid rgba(255, 255, 255, .4); color: #fff; border-radius: 4px; padding: 2px 10px; cursor: pointer; }
+kbd { font-family: inherit; font-size: 11px; border: 1px solid #ccc; border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; color: var(--muted); background: #fff; }
 
+@media (max-width: 1200px) {
+  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .big-stats { grid-template-columns: repeat(2, 1fr); row-gap: 12px; }
+}
 @media (max-width: 760px) {
-  .topbar { padding: 8px 16px; gap: 8px; }
-  .filterbar, .tabs { padding-left: 16px; padding-right: 16px; }
-  main { padding: 16px; }
+  .hdr-in { padding: 0 12px; gap: 8px; }
+  .nav { margin-left: 0; }
+  .nav button { padding: 0 8px; font-size: 11.5px; }
+  .logo b, .sync { display: none; }
+  .btn-add { padding: 5px 10px; }
+  .mapwrap { height: 52vh; }
+  .avatar { display: none; }
+  .big .v { font-size: 24px; }
+  .big { padding: 4px 10px; }
+  .pies-in { grid-template-columns: repeat(2, 1fr); }
+  .cards, .trend-row { grid-template-columns: 1fr; }
+  .page { padding: 16px; }
   .search { width: 100%; }
-  .actions { width: 100%; }
-  .hud { flex-wrap: wrap; }
-  .hud .stat { padding: 6px 10px; }
-  .hud .v { font-size: 15px; }
-  .hud .stat:nth-child(n+4) { display: none; }
-  .map-controls { top: auto; bottom: 16px; }
-  .legend { display: none; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }
-  .field, .field.w1, .field.w3, .field.w4, .field.w6, .form-preview { grid-column: span 2; }
+  .field, .field.w1, .field.w3, .field.w6, .form-preview { grid-column: span 2; }
   .issue { grid-template-columns: 1fr; }
   .issue .acts { justify-content: flex-start; }
-  .journey { grid-template-columns: 1fr; }
-  .journey .meta { text-align: left; }
+  .legend { display: none; }
+  .year-select { margin: 8px; }
 }
 </style>
 </head>
 <body>
-  <header class="topbar" id="topbar">
-    <div class="brand">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>
-      Skylog
+  <!-- Lock / setup screen (hosted mode). Nothing below is rendered until the log is unlocked. -->
+  <div class="gate hidden" id="gate">
+    <div class="gate-card">
+      <div class="top">
+        <div class="logo"><span class="mark"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></span><b>Skylog</b></div>
+        <p id="gate-msg">This flight log is private.</p>
+      </div>
+      <!-- unlock -->
+      <form id="unlock-form" class="hidden">
+        <div class="field"><label for="u-pass">Password</label><input id="u-pass" type="password" autocomplete="current-password" required autofocus></div>
+        <label class="check"><input type="checkbox" id="u-remember"> Keep me signed in on this device</label>
+        <div class="err" id="u-err"></div>
+        <button class="btn primary" id="u-go">Unlock</button>
+        <div class="small">Your log is encrypted in this browser. Without the password, nobody (including GitHub) can read it.</div>
+      </form>
+      <!-- first-time setup -->
+      <form id="setup-form" class="hidden">
+        <div class="field"><label for="s-pass">Choose a password</label><input id="s-pass" type="password" autocomplete="new-password" minlength="10" required>
+          <div class="strength"><i id="s-meter"></i></div><div class="hint" id="s-hint">At least 10 characters. A few random words works well.</div></div>
+        <div class="field"><label for="s-pass2">Confirm password</label><input id="s-pass2" type="password" autocomplete="new-password" required></div>
+        <div class="field"><label for="s-token">GitHub access token</label><input id="s-token" type="password" autocomplete="off" required placeholder="github_pat_…">
+          <div class="hint">Lets this site save to your repository. <a id="s-token-link" target="_blank" rel="noopener">Create one</a> with access to only this repo and <b>Contents: Read and write</b>. It's stored inside the encrypted log.</div></div>
+        <div class="field"><label for="s-csv">Import flights (optional)</label><input id="s-csv" type="file" accept=".csv,.json"><div class="hint">A myFlightradar24 CSV export or a Skylog backup.</div></div>
+        <div class="err" id="s-err"></div>
+        <button class="btn primary" id="s-go">Create my flight log</button>
+        <div class="small">There is no password reset: if you forget it, the log can't be decrypted. Keep it in a password manager.</div>
+      </form>
     </div>
-    <span class="save-state" id="save-state"></span>
-    <button class="btn small ghost hidden" id="btn-backup"></button>
-    <div class="spacer"></div>
-    <div class="actions">
-      <input class="search" id="search" type="search" placeholder="Search flights, airports, tails…" aria-label="Search flights">
-      <button class="btn primary" id="btn-add" title="Add flight (N)">+ Add flight</button>
-      <button class="btn" id="btn-import">Import</button>
-      <button class="btn" id="btn-export">Export ▾</button>
-      <button class="btn" id="btn-units" title="Switch units">km</button>
-      <button class="btn" id="btn-theme" title="Theme">Auto</button>
+  </div>
+
+  <header class="hdr">
+    <div class="hdr-in">
+      <div class="logo"><span class="mark"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></span><b>Skylog</b></div>
+      <nav class="nav" id="nav">
+        <button data-page="profile">Profile</button>
+        <button data-page="flights">Flights</button>
+        <button data-page="check">Data check</button>
+      </nav>
+      <div class="spacer"></div>
+      <span class="sync" id="sync"></span>
+      <button class="btn-add" id="btn-add" title="Add flight (N)">+ Add flight</button>
+      <button class="icon-btn" id="btn-menu" aria-label="Menu"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
     </div>
   </header>
 
-  <div class="filterbar" id="filterbar"></div>
+  <!-- PROFILE -->
+  <div id="page-profile">
+    <section class="mapwrap" id="mapwrap">
+      <div class="map" id="map"></div>
+      <div class="map-ctrl">
+        <div class="seg" id="seg-mode"><button data-mode="flat">Map</button><button data-mode="globe">Globe</button></div>
+        <div class="seg"><button id="btn-replay" title="Replay your flights in order">▶ Replay</button></div>
+        <div class="seg"><button id="btn-zin" aria-label="Zoom in">+</button><button id="btn-zout" aria-label="Zoom out">−</button><button id="btn-reset" aria-label="Reset view">⟲</button></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="replay hidden" id="replay">
+        <div class="now" id="rp-date"></div><div class="leg" id="rp-leg"></div>
+        <div class="ctrl"><button class="btn small" id="rp-pause">Pause</button><button class="btn small" id="rp-speed">1×</button><button class="btn small" id="rp-stop">✕</button></div>
+        <div class="bar"><i id="rp-bar"></i></div>
+      </div>
+    </section>
+    <section class="strip">
+      <div class="rainbow"></div>
+      <div class="strip-in">
+        <div class="avatar"><div><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5 0-9 2.5-9 6v4h18v-4c0-3.5-4-6-9-6z"/></svg></div></div>
+        <div class="big-stats" id="big-stats"></div>
+        <div class="year-select"><select id="year" aria-label="Select a year"></select></div>
+      </div>
+      <div class="rainbow"></div>
+    </section>
+    <section class="pies"><div class="pies-in" id="pies"></div></section>
+    <div class="page" id="stats"></div>
+  </div>
 
-  <section class="hero">
-    <div class="map" id="map"></div>
-    <div class="hud" id="hud"></div>
-    <div class="map-controls">
-      <div class="seg" id="seg-mode">
-        <button data-mode="flat">Map</button>
-        <button data-mode="globe">Globe</button>
-      </div>
-      <div class="seg" id="seg-color">
-        <button data-color="frequency">Frequency</button>
-        <button data-color="recency">Recency</button>
-      </div>
-      <div class="seg">
-        <button id="btn-replay" title="Replay your flights in order">▶ Replay</button>
-      </div>
-      <div class="seg">
-        <button id="btn-zin" title="Zoom in" aria-label="Zoom in">+</button>
-        <button id="btn-zout" title="Zoom out" aria-label="Zoom out">−</button>
-        <button id="btn-reset" title="Reset view (double-click map)" aria-label="Reset view">⟲</button>
-      </div>
-    </div>
-    <div class="legend" id="legend"></div>
-    <div class="replay hidden" id="replay">
-      <div class="now" id="rp-date"></div>
-      <div class="leg" id="rp-leg"></div>
-      <div class="ctrl">
-        <button class="btn small" id="rp-pause">Pause</button>
-        <button class="btn small" id="rp-speed">1×</button>
-        <button class="btn small" id="rp-stop">✕</button>
-      </div>
-      <div class="bar"><i id="rp-bar"></i></div>
-    </div>
-  </section>
-
-  <nav class="tabs" id="tabs" role="tablist">
-    <button class="tab" role="tab" data-tab="overview">Overview</button>
-    <button class="tab" role="tab" data-tab="flights">Flights</button>
-    <button class="tab" role="tab" data-tab="places">Places</button>
-    <button class="tab" role="tab" data-tab="fleet">Airlines &amp; aircraft</button>
-    <button class="tab" role="tab" data-tab="trips">Routes &amp; trips</button>
-    <button class="tab" role="tab" data-tab="achievements">Achievements</button>
-    <button class="tab" role="tab" data-tab="health">Data health</button>
-  </nav>
-
-  <main id="view"></main>
+  <!-- FLIGHTS -->
+  <div class="page hidden" id="page-flights"></div>
+  <!-- DATA CHECK -->
+  <div class="page hidden" id="page-check"></div>
 
   <!-- Add / edit flight -->
-  <dialog id="dlg-flight">
+  <dialog id="dlg-flight" class="pop">
     <form method="dialog" id="flight-form" autocomplete="off">
-      <div class="dlg-head"><h2 id="flight-title">Add flight</h2><button class="btn ghost" value="cancel" formnovalidate>✕</button></div>
+      <div class="dlg-head"><h2 id="flight-title">Add flight</h2><button class="x-btn" value="cancel" formnovalidate aria-label="Close">✕</button></div>
       <div class="dlg-body">
         <div class="form-grid">
           <div class="field"><label for="f-date">Date</label><input id="f-date" name="date" type="date" required></div>
@@ -480,7 +454,7 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); bo
           <div class="field w3"><label for="f-to">To</label><input id="f-to" name="to" list="dl-airports" placeholder="Code or city" required><div class="hint" id="h-to"></div></div>
           <div class="field"><label for="f-dep">Departure (local)</label><input id="f-dep" name="depTime" type="time"></div>
           <div class="field"><label for="f-arr">Arrival (local)</label><input id="f-arr" name="arrTime" type="time"></div>
-          <div class="field"><label for="f-dur">Duration</label><input id="f-dur" name="duration" placeholder="hh:mm (auto)"><div class="hint" id="h-dur"></div></div>
+          <div class="field"><label for="f-dur">Duration</label><input id="f-dur" name="duration" placeholder="h:mm (auto)"><div class="hint" id="h-dur"></div></div>
           <div class="field w3"><label for="f-airline">Airline</label><input id="f-airline" name="airline" list="dl-airlines" placeholder="British Airways (BA/BAW)"></div>
           <div class="field w3"><label for="f-aircraft">Aircraft</label><input id="f-aircraft" name="aircraft" list="dl-aircraft" placeholder="Airbus A380-800 (A388)"></div>
           <div class="field w1"><label for="f-seat">Seat</label><input id="f-seat" name="seat" placeholder="34K"></div>
@@ -493,7 +467,7 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); bo
       </div>
       <div class="dlg-foot">
         <button class="btn danger" type="button" id="f-delete">Delete</button>
-        <button class="btn" type="button" id="f-return" title="Save, then start the return flight">Save &amp; add return</button>
+        <button class="btn" type="button" id="f-return">Save &amp; add return</button>
         <div class="spacer"></div>
         <button class="btn" value="cancel" formnovalidate>Cancel</button>
         <button class="btn primary" value="save" id="f-save">Save</button>
@@ -501,10 +475,13 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); bo
     </form>
   </dialog>
 
+  <!-- Comparison pop-up for a top-list card -->
+  <dialog id="dlg-compare" class="pop compare"><div id="compare"></div></dialog>
+
   <!-- Import -->
-  <dialog id="dlg-import">
+  <dialog id="dlg-import" class="pop">
     <form method="dialog" id="import-form">
-      <div class="dlg-head"><h2>Import flights</h2><button class="btn ghost" value="cancel">✕</button></div>
+      <div class="dlg-head"><h2>Import flights</h2><button class="x-btn" value="cancel" aria-label="Close">✕</button></div>
       <div class="dlg-body">
         <label class="drop" id="drop">
           <input type="file" id="import-file" accept=".csv,.json,text/csv,application/json" hidden>
@@ -515,16 +492,16 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); bo
           <label><input type="radio" name="mode" value="merge" checked> Merge (skip duplicates)</label>
           <label><input type="radio" name="mode" value="replace"> Replace everything</label>
         </div>
-        <div class="import-summary hidden" id="import-summary"></div>
+        <div class="note hidden" id="import-summary"></div>
       </div>
       <div class="dlg-foot"><div class="spacer"></div><button class="btn" value="cancel">Cancel</button><button class="btn primary" value="go" id="import-go" disabled>Import</button></div>
     </form>
   </dialog>
 
   <!-- Custom airport -->
-  <dialog id="dlg-airport">
+  <dialog id="dlg-airport" class="pop">
     <form method="dialog" id="airport-form" autocomplete="off">
-      <div class="dlg-head"><h2>Airport</h2><button class="btn ghost" value="cancel" formnovalidate>✕</button></div>
+      <div class="dlg-head"><h2>Airport</h2><button class="x-btn" value="cancel" formnovalidate aria-label="Close">✕</button></div>
       <div class="dlg-body">
         <div class="form-grid">
           <div class="field"><label for="a-code">IATA code</label><input id="a-code" name="iata" required maxlength="4" placeholder="ABC"></div>
@@ -536,9 +513,30 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid var(--border); bo
           <div class="field"><label for="a-lon">Longitude</label><input id="a-lon" name="lon" type="number" step="any" min="-180" max="180" required placeholder="-73.7781"></div>
           <div class="field"><label for="a-tz">Time zone</label><input id="a-tz" name="tz" list="dl-tz" placeholder="America/New_York"></div>
         </div>
-        <p class="muted" style="margin:12px 0 0">Tip: search the airport on Wikipedia; coordinates are in the infobox. Custom airports override built-in ones.</p>
+        <p class="muted" style="margin:12px 0 0">Coordinates are in the airport's Wikipedia infobox. Custom airports override built-in ones.</p>
       </div>
       <div class="dlg-foot"><button class="btn danger" type="button" id="a-delete">Remove</button><div class="spacer"></div><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="save">Save airport</button></div>
+    </form>
+  </dialog>
+
+  <!-- Settings (hosted mode) -->
+  <dialog id="dlg-settings" class="pop">
+    <form method="dialog" id="settings-form" autocomplete="off">
+      <div class="dlg-head"><h2>Security &amp; sync</h2><button class="x-btn" value="cancel" formnovalidate aria-label="Close">✕</button></div>
+      <div class="dlg-body">
+        <div class="note" id="set-where"></div>
+        <h3 style="margin:18px 0 8px;font-size:14px">Change password</h3>
+        <div class="form-grid">
+          <div class="field w3"><label for="set-pass">New password</label><input id="set-pass" type="password" autocomplete="new-password" minlength="10"></div>
+          <div class="field w3"><label for="set-pass2">Confirm</label><input id="set-pass2" type="password" autocomplete="new-password"></div>
+        </div>
+        <h3 style="margin:18px 0 8px;font-size:14px">GitHub access token</h3>
+        <div class="form-grid">
+          <div class="field w6"><label for="set-token">Replace token</label><input id="set-token" type="password" placeholder="github_pat_… (leave blank to keep the current one)"></div>
+        </div>
+        <div class="err" id="set-err" style="color:var(--critical);font-weight:700;margin-top:10px"></div>
+      </div>
+      <div class="dlg-foot"><div class="spacer"></div><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="save">Save changes</button></div>
     </form>
   </dialog>
 
@@ -1295,7 +1293,16 @@ function healthCheck(all) {
 
 
 const ATLAS = 'https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/';
-const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+// Routes are colored by how many times they've been flown (both directions combined).
+const FREQ = [
+  { max: 1, label: '1×', color: 'var(--f1)' },
+  { max: 2, label: '2×', color: 'var(--f2)' },
+  { max: 5, label: '3–5×', color: 'var(--f3)' },
+  { max: Infinity, label: '6×+', color: 'var(--f4)' },
+];
+const freqColor = n => FREQ.find(b => n <= b.max).color;
+const PIN = 'M0,0 C-1,-4 -6,-7.5 -6,-12.5 A6,6 0 1 1 6,-12.5 C6,-7.5 1,-4 0,0 Z';
 
 function createMap(el, { tooltip, onRoute, onAirport }) {
   const svg = d3.select(el).append('svg');
@@ -1305,14 +1312,15 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
   const gRoutes = svg.append('g');
   const gHits = svg.append('g');
   const gReplay = svg.append('g');
+  const gCountryLabels = svg.append('g');
   const gAirports = svg.append('g');
   const gLabels = svg.append('g');
   const graticule = d3.geoGraticule10();
   const sphere = { type: 'Sphere' };
 
-  let land = { lo: null, hi: null }, visited = new Set();
+  let land = { lo: null, hi: null }, visited = new Set(), labelsFor = [];
   let data = { routes: [], airports: [] };
-  let mode = 'flat', colorBy = 'frequency';
+  let mode = 'flat';
   let w = 800, h = 500, k = 1, rot = [0, 0], ty = 0, center = 0;
   let interacting = false, idleTimer = null, highlight = null, replayState = null;
   const proj = { flat: d3.geoNaturalEarth1(), globe: d3.geoOrthographic().clipAngle(90) };
@@ -1324,6 +1332,9 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
     : Promise.all([d3.json(ATLAS + 'countries-110m.json'), d3.json(ATLAS + 'countries-50m.json')])).then(([lo, hi]) => {
     land.lo = topojson.feature(lo, lo.objects.countries).features;
     land.hi = topojson.feature(hi, hi.objects.countries).features;
+    // Country name labels, biggest first (placed later only where they don't collide).
+    labelsFor = land.lo.map(f => ({ name: f.properties.name, area: d3.geoArea(f), c: d3.geoCentroid(f) }))
+      .filter(l => l.area > 0.0015).sort((a, b) => b.area - a.area);
     render();
   }).catch(() => { el.dataset.offline = '1'; render(); });
 
@@ -1349,8 +1360,7 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
   let fit = null;
   function fitFlat() {
     const fitTo = data.routes.length ? { type: 'MultiLineString', coordinates: data.routes.map(r => r.path || [[r.a.lon, r.a.lat], [r.b.lon, r.b.lat]]) } : sphere;
-    const top = Math.min(110, h * 0.2);
-    proj.flat.rotate([-center, 0]).fitExtent([[24, top], [w - 24, h - 28]], fitTo);
+    proj.flat.rotate([-center, 0]).fitExtent([[30, 36], [w - 30, h - 44]], fitTo);
     fit = { s: proj.flat.scale(), t: proj.flat.translate() };
   }
   // Degrees of longitude per screen pixel at the equator (Natural Earth's x-scale is ~0.8707).
@@ -1360,12 +1370,6 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
   const visible = (lon, lat) => mode !== 'globe' || d3.geoDistance([lon, lat], [-rot[0], -rot[1]]) < Math.PI / 2 - 0.02;
   const line = r => ({ type: 'LineString', coordinates: [[r.a.lon, r.a.lat], [r.b.lon, r.b.lat]] });
 
-  function routeColor(r) {
-    if (colorBy !== 'recency') return css('--s1');
-    const [y0, y1] = data.yearRange;
-    const t = y1 === y0 ? 1 : (r.lastYear - y0) / (y1 - y0);
-    return d3.interpolateLab(css('--route-old'), css('--route-new'))(t);
-  }
 
   function render() {
     configure();
@@ -1377,16 +1381,15 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
       .attr('class', d => 'land' + (visited.has(d.id) ? ' visited' : ''))
       .attr('d', path);
 
-    const maxC = d3.max(data.routes, r => r.count) || 1;
-    const width = d3.scaleSqrt().domain([1, maxC]).range([1.1, 4.2]);
-    const routes = replayState ? [] : data.routes;
+    const routes = replayState ? [] : [...data.routes].sort((a, b) => a.count - b.count);
     gRoutes.classed('dim', !!highlight && !replayState);
     gRoutes.selectAll('path').data(routes, r => r.key).join('path')
       .attr('class', r => 'route' + (highlight?.has(r.key) ? ' hl' : ''))
       .attr('d', r => path(line(r)))
-      .attr('stroke', routeColor)
-      .attr('stroke-width', r => width(r.count))
-      .attr('stroke-opacity', r => colorBy === 'recency' ? 0.9 : 0.35 + 0.6 * (r.count / maxC));
+      .style('stroke', r => freqColor(r.count))
+      .attr('stroke-width', r => r.count >= 6 ? 2.6 : r.count >= 3 ? 2.1 : 1.6)
+      .attr('stroke-opacity', 0.9);
+    gRoutes.selectAll('path').order();
     gRoutes.selectAll('path.hl').raise();
     gHits.selectAll('path').data(routes, r => r.key).join('path')
       .attr('class', 'route-hit').attr('d', r => path(line(r)))
@@ -1395,28 +1398,45 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
       .on('mouseleave', () => { tooltip.hide(); setHighlight(null, true); })
       .on('click', (ev, r) => onRoute?.(r));
 
+    // Country names (flat map only), largest countries first, skipping collisions.
+    const placed = [];
+    const cl = mode === 'globe' || lowres ? [] : labelsFor.filter(l => {
+      if (l.area < 0.004 / (k * k)) return false;
+      const p = projection(l.c); if (!p || p[0] < 0 || p[0] > w || p[1] < 0 || p[1] > h) return false;
+      const bw = l.name.length * 6.2, box = [p[0] - bw / 2, p[1] - 7, bw, 14];
+      if (placed.some(b => box[0] < b[0] + b[2] && box[0] + box[2] > b[0] && box[1] < b[1] + b[3] && box[1] + box[3] > b[1])) return false;
+      placed.push(box); return true;
+    });
+    gCountryLabels.selectAll('text').data(cl, l => l.name).join('text')
+      .attr('class', 'country-label').attr('transform', l => `translate(${projection(l.c)})`).text(l => l.name);
+
+    // Airport pins: busier airports get slightly bigger pins; southern pins sit in front.
     const maxV = d3.max(data.airports, a => a.count) || 1;
-    const rad = d3.scaleSqrt().domain([1, maxV]).range([2.6, 7.5]);
+    const size = a => 0.72 + 0.4 * Math.sqrt(a.count / maxV);
     const aps = data.airports.filter(a => visible(a.a.lon, a.a.lat));
-    gAirports.selectAll('circle').data(aps, a => a.code).join('circle')
-      .attr('class', a => 'airport' + (highlight?.ap === a.code ? ' hl' : ''))
-      .attr('r', a => rad(a.count))
-      .attr('transform', a => `translate(${projection([a.a.lon, a.a.lat])})`)
+    gAirports.selectAll('g.pin').data([...aps].sort((a, b) => b.a.lat - a.a.lat), a => a.code).join(enter => {
+      const g = enter.append('g').attr('class', 'pin');
+      g.append('path').attr('d', PIN); g.append('circle').attr('cy', -12.5).attr('r', 2.3);
+      return g;
+    })
+      .classed('hl', a => highlight?.ap === a.code)
+      .attr('transform', a => `translate(${projection([a.a.lon, a.a.lat])}) scale(${size(a)})`)
       .on('mousemove', (ev, a) => tooltip.show(ev, `<b>${a.code}</b> · ${a.a.label}<div class="t-sub">${a.a.countryName} · ${a.count} visit${a.count > 1 ? 's' : ''} (${a.deps} dep, ${a.arrs} arr)</div>`))
       .on('mouseleave', () => tooltip.hide())
-      .on('click', (ev, a) => onAirport?.(a));
+      .on('click', (ev, a) => onAirport?.(a))
+      .order();
     // Label the busiest airports first, skipping any label that would collide with one already placed.
-    const labelN = Math.round(8 + 8 * Math.min(k, 4)), boxes = [], labeled = [];
+    const labelN = Math.round(8 + 8 * Math.min(k, 4)), boxes = [...placed], labeled = [];
     for (const a of aps) {
       if (labeled.length >= labelN) break;
       const p = projection([a.a.lon, a.a.lat]); if (!p) continue;
-      const x = p[0] + rad(a.count) + 3, y = p[1] - 5, bw = a.code.length * 7.5, bh = 12;
+      const x = p[0] + 7 * size(a), y = p[1] - 19 * size(a), bw = a.code.length * 7.5, bh = 12;
       if (boxes.some(b => x < b[0] + b[2] && x + bw > b[0] && y < b[1] + b[3] && y + bh > b[1])) continue;
       boxes.push([x, y, bw, bh]); labeled.push(a);
     }
     gLabels.selectAll('text').data(labeled, a => a.code).join('text')
       .attr('class', 'ap-label')
-      .attr('transform', a => { const [x, y] = projection([a.a.lon, a.a.lat]); return `translate(${x + rad(a.count) + 3},${y + 4})`; })
+      .attr('transform', a => { const [x, y] = projection([a.a.lon, a.a.lat]); return `translate(${x + 7 * size(a)},${y - 9 * size(a)})`; })
       .text(a => a.code);
 
     if (replayState) drawReplay();
@@ -1497,7 +1517,7 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
   function drawReplay() {
     const { list, i, t } = replayState;
     gReplay.selectAll('path.replay-done').data(list.slice(0, i), f => f.id).join('path')
-      .attr('class', 'replay-done').attr('d', f => path(line(f)));
+      .attr('class', 'replay-done').attr('d', f => path(line(f))).style('stroke', f => freqColor(f.routeCount || 1));
     const cur = list[i];
     if (!cur) { gReplay.selectAll('.replay-trail,.plane').remove(); return; }
     const interp = d3.geoInterpolate([cur.a.lon, cur.a.lat], [cur.b.lon, cur.b.lat]);
@@ -1522,13 +1542,13 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
     },
     setMode(m) {
       mode = m; k = 1; ty = 0;
+      el.parentElement.classList.toggle('globe', m === 'globe');
       if (m === 'globe') {
         const top = data.airports[0]?.a;
         rot = top ? [-top.lon, -Math.max(-40, Math.min(40, top.lat * 0.8))] : [0, -20];
       } else { center = bestCenter(data.routes); fit = null; }
       render();
     },
-    setColorBy(c) { colorBy = c; render(); },
     highlightRoutes(keys) { setHighlight(keys?.length ? keys : null, true); },
     reset() { api.setMode(mode); },
     zoomBy(f) { zoomAt(k * f); },
@@ -1573,7 +1593,117 @@ function createMap(el, { tooltip, onRoute, onAirport }) {
   return api;
 }
 
+// ---- vault.js
+// Encrypted storage for the hosted (GitHub Pages) version.
+//
+// The whole logbook is encrypted in the browser with AES-256-GCM, using a key derived from
+// your password with PBKDF2-SHA256 (600k iterations). Only the ciphertext is ever stored in
+// the repository, so visitors to the site, or anyone browsing the repo, see nothing readable.
+// Every save is a commit, so git history doubles as a full version history.
+
+const enc = new TextEncoder(), dec = new TextDecoder();
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const ITERATIONS = 600000;
+
+const VAULT_FILE = 'vault.json';
+
+// ---------- crypto
+async function deriveKey(password, salt, iterations = ITERATIONS) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, base,
+    { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+// A session: the derived key plus the salt it belongs to (needed to write the file back).
+async function newSession(password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return { key: await deriveKey(password, salt), salt, iterations: ITERATIONS };
+}
+
+async function seal(session, payload) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, session.key, enc.encode(JSON.stringify(payload)));
+  return {
+    format: 'skylog-vault', v: 1,
+    kdf: { name: 'PBKDF2', hash: 'SHA-256', iterations: session.iterations, salt: b64(session.salt) },
+    iv: b64(iv), data: b64(data),
+  };
+}
+
+// Throws 'bad-password' if the password (or key) doesn't open this vault.
+async function openVault(vault, passwordOrSession) {
+  if (vault?.format !== 'skylog-vault') throw new Error('not-a-vault');
+  const salt = unb64(vault.kdf.salt);
+  const session = typeof passwordOrSession === 'string'
+    ? { key: await deriveKey(passwordOrSession, salt, vault.kdf.iterations), salt, iterations: vault.kdf.iterations }
+    : passwordOrSession;
+  try {
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(vault.iv) }, session.key, unb64(vault.data));
+    return { session, payload: JSON.parse(dec.decode(plain)) };
+  } catch { throw new Error('bad-password'); }
+}
+
+// Sessions can be kept for the tab (sessionStorage) or, if asked, on this device (localStorage).
+async function exportSession(s) {
+  return JSON.stringify({ key: b64(await crypto.subtle.exportKey('raw', s.key)), salt: b64(s.salt), iterations: s.iterations });
+}
+async function importSession(json) {
+  const o = JSON.parse(json);
+  const key = await crypto.subtle.importKey('raw', unb64(o.key), { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+  return { key, salt: unb64(o.salt), iterations: o.iterations };
+}
+
+// ---------- GitHub repository as the store
+// Where this copy of the site lives: <owner>.github.io/<repo>/  (or a build-time override for testing).
+function detectRepo() {
+  const cfg = globalThis.SKYLOG_CONFIG;
+  if (cfg?.repo) return { owner: cfg.repo.split('/')[0], repo: cfg.repo.split('/')[1], api: cfg.api || 'https://api.github.com' };
+  const m = location.hostname.match(/^([a-z0-9-]+)\.github\.io$/i);
+  if (!m) return null;
+  const first = location.pathname.split('/').filter(Boolean)[0];
+  return { owner: m[1], repo: first && !first.includes('.') ? first : `${m[1]}.github.io`, api: 'https://api.github.com' };
+}
+
+const utf8b64 = s => { const bytes = enc.encode(s); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+
+function githubStore(where) {
+  const url = `${where.api}/repos/${where.owner}/${where.repo}/contents/${VAULT_FILE}`;
+  const headers = token => ({ Accept: 'application/vnd.github+json', ...(token ? { Authorization: `Bearer ${token}` } : {}) });
+  return {
+    where,
+    // -> { vault, sha } or null when the repo has no vault yet
+    async read(token) {
+      const r = await fetch(url, { headers: headers(token), cache: 'no-store' });
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(`GitHub read failed (${r.status})`);
+      const j = await r.json();
+      const text = j.content ? dec.decode(unb64(j.content.replace(/\s/g, ''))) : await (await fetch(j.download_url, { cache: 'no-store' })).text();
+      return { vault: JSON.parse(text), sha: j.sha };
+    },
+    // -> new sha. Throws { conflict: true } if someone else saved first.
+    async write(token, vault, sha, message = 'Update flight log') {
+      const r = await fetch(url, {
+        method: 'PUT', headers: { ...headers(token), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, content: utf8b64(JSON.stringify(vault)), ...(sha ? { sha } : {}) }),
+      });
+      if (r.status === 409 || r.status === 422) throw Object.assign(new Error('conflict'), { conflict: true });
+      if (r.status === 401 || r.status === 403) throw Object.assign(new Error('GitHub refused the token'), { auth: true });
+      if (!r.ok) throw new Error(`GitHub save failed (${r.status})`);
+      return (await r.json()).content.sha;
+    },
+    // Checks the token can write to this repository.
+    async checkToken(token) {
+      const r = await fetch(`${where.api}/repos/${where.owner}/${where.repo}`, { headers: headers(token), cache: 'no-store' });
+      if (!r.ok) return { ok: false, reason: r.status === 401 ? 'The token was rejected.' : `GitHub said ${r.status}.` };
+      const j = await r.json();
+      return j.permissions?.push ? { ok: true } : { ok: false, reason: `The token can't write to ${where.owner}/${where.repo}. Give it Contents: Read and write.` };
+    },
+  };
+}
+
 // ---- app.js
+
 
 
 
@@ -1585,24 +1715,22 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const store = {
   get(k, d) { try { const v = localStorage.getItem('skylog.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('skylog.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  del(k) { try { localStorage.removeItem('skylog.' + k); } catch { /* storage unavailable */ } },
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const SERIES = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7', '--s8'].map(v => `var(${v})`);
+const GRAYS = ['#2f2f2f', '#5c5c5c', '#8a8a8a', '#b4b4b4', '#d9d9d9', '#ececec'];
 
 const state = {
   db: null, all: [], ap: null, issues: [], issueBy: new Map(),
   filter: { year: null, airport: null, airline: null, route: null, aircraft: null, q: '' },
-  tab: store.get('tab', 'overview'), units: store.get('units', 'km'), theme: store.get('theme', 'auto'),
-  mapMode: store.get('mapMode', 'flat'), colorBy: store.get('colorBy', 'frequency'),
-  sort: { key: 'sortTime', dir: -1 }, undo: [], showAll: {}, healthSev: 'all', tripsAll: false,
+  page: store.get('page', 'profile'), units: store.get('units', 'km'), mapMode: store.get('mapMode', 'flat'),
+  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all',
 };
 
 const n0 = n => Math.round(n).toLocaleString();
 const dist = km => km == null ? '—' : state.units === 'mi' ? `${n0(km / KM_PER_MI)} mi` : `${n0(km)} km`;
-const distNum = km => state.units === 'mi' ? km / KM_PER_MI : km;
 const dur = m => m == null ? '—' : `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
-const durLong = m => { const d = Math.floor(m / 1440), h = Math.round((m % 1440) / 60); return d ? `${d}d ${h}h` : `${h}h`; };
 const date = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? '' : 's'}`;
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
@@ -1637,83 +1765,66 @@ function toast(msg, undoable = false) {
 }
 $('#toast-undo').onclick = () => { undo(); $('#toast').classList.remove('on'); };
 
-// ---------- persistence
-// The logbook lives in this browser's storage. It can also be mirrored to a JSON file you pick
-// once, which survives clearing browser data and restores on any machine.
-const DB_KEY = 'skylog.db';
-let saveTimer;
-const backup = { handle: null, state: 'off' }; // off | on | reconnect
-const fsSupported = 'showSaveFilePicker' in window;
-function setSave(text, err = false) { const el = $('#save-state'); el.textContent = text; el.classList.toggle('err', err); }
+// ---------- storage
+// Hosted on GitHub Pages: the log is an encrypted file in the repository (see vault.js).
+// Opened any other way (e.g. a downloaded file): it lives in this browser's storage.
+const where = detectRepo();
+const hosted = !!where;
+const gh = hosted ? githubStore(where) : null;
+const sync = { session: null, sha: null, token: null, timer: null, busy: false, rev: 0, saved: 0 };
+const KEY = 'skylog.key';
+
+function setSync(text, kind = '') { const el = $('#sync'); el.textContent = text; el.className = 'sync ' + kind; }
+const unsynced = () => hosted && sync.rev !== sync.saved;
+
 function save() {
   state.db.savedAt = new Date().toISOString();
-  try { localStorage.setItem(DB_KEY, JSON.stringify(state.db)); setSave('Saved'); }
-  catch { setSave('Not saved: browser storage unavailable. Use Export.', true); }
-  clearTimeout(saveTimer);
-  if (backup.state === 'on') saveTimer = setTimeout(writeBackup, 400);
+  if (!hosted) {
+    try { localStorage.setItem('skylog.db', JSON.stringify(state.db)); setSync('Saved in this browser', 'ok'); }
+    catch { setSync('Not saved: browser storage unavailable. Use Export.', 'err'); }
+    return;
+  }
+  sync.rev++;
+  setSync('Saving…');
+  clearTimeout(sync.timer);
+  sync.timer = setTimeout(push, 1000);
 }
-// Another Skylog window saved: pick up its changes.
-addEventListener('storage', e => {
-  if (e.key !== DB_KEY || !e.newValue) return;
-  try { state.db = JSON.parse(e.newValue); recompute(); } catch { /* ignore partial writes */ }
-});
 
-function idb(mode, fn) {
-  return new Promise((resolve, reject) => {
-    const open = indexedDB.open('skylog', 1);
-    open.onupgradeneeded = () => open.result.createObjectStore('kv');
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const tx = open.result.transaction('kv', mode), req = fn(tx.objectStore('kv'));
-      tx.oncomplete = () => resolve(req.result);
-      tx.onerror = () => reject(tx.error);
-    };
-  });
+async function push() {
+  if (sync.busy) { sync.timer = setTimeout(push, 700); return; }
+  sync.busy = true;
+  const rev = sync.rev;
+  try {
+    const sealed = await seal(sync.session, { db: state.db, token: sync.token });
+    // Keep an encrypted copy on this device until GitHub confirms the save, so nothing is lost
+    // if the tab closes or the connection drops.
+    store.set('pending', { vault: sealed, baseSha: sync.sha });
+    if (!sync.token) { setSync('Not synced: add a GitHub token (menu → Security & sync)', 'err'); return; }
+    sync.sha = await gh.write(sync.token, sealed, sync.sha);
+    store.set('cache', { vault: sealed, sha: sync.sha });
+    if (sync.rev === rev) { sync.saved = rev; store.del('pending'); setSync('Saved to GitHub', 'ok'); }
+  } catch (e) {
+    if (e.conflict) await resolveConflict();
+    else if (e.auth) setSync('GitHub rejected the token. Update it in Security & sync.', 'err');
+    else { setSync('Offline: changes kept on this device, retrying…', 'err'); clearTimeout(sync.timer); sync.timer = setTimeout(push, 15000); }
+  } finally { sync.busy = false; }
 }
-const kvGet = k => idb('readonly', s => s.get(k));
-const kvSet = (k, v) => idb('readwrite', s => s.put(v, k));
+addEventListener('online', () => { if (unsynced()) push(); });
+addEventListener('beforeunload', e => { if (unsynced()) e.preventDefault(); });
 
-async function writeBackup() {
-  try {
-    const w = await backup.handle.createWritable();
-    await w.write(JSON.stringify(state.db, null, 1)); await w.close();
-  } catch { backup.state = 'reconnect'; }
-  renderBackup();
+// Someone saved from another device since this one loaded.
+async function resolveConflict() {
+  let remote, theirs = null;
+  try { remote = await gh.read(sync.token); theirs = (await openVault(remote.vault, sync.session)).payload; } catch { /* unreadable */ }
+  if (!theirs) { setSync('The log was re-encrypted elsewhere (new password?). Reload to unlock again.', 'err'); return; }
+  sync.sha = remote.sha;
+  const keepMine = confirm(`Your flight log was also changed on another device (${theirs.db.flights.length} flights there, ${state.db.flights.length} here).\n\n` +
+    'OK: keep the version on this device (replaces the other one)\nCancel: switch to the other version (discards changes made here)');
+  if (keepMine) { sync.timer = setTimeout(push, 0); return; }
+  state.db = theirs.db; sync.saved = sync.rev; store.del('pending');
+  recompute(); setSync('Loaded the latest version', 'ok');
 }
-async function readBackup() {
-  const data = JSON.parse(await (await backup.handle.getFile()).text());
-  return Array.isArray(data?.flights) ? data : null;
-}
-async function linkBackup() {
-  try {
-    const handle = await showSaveFilePicker({ suggestedName: 'skylog-data.json', types: [{ description: 'Skylog data', accept: { 'application/json': ['.json'] } }] });
-    Object.assign(backup, { handle, state: 'on' });
-    await kvSet('backup', handle); await writeBackup();
-    toast(`Every change now also saves to ${handle.name}`);
-  } catch (e) { if (e.name !== 'AbortError') toast('Could not set up the backup file'); }
-}
-async function reconnectBackup() {
-  try { if (await backup.handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return; }
-  catch { backup.state = 'off'; return renderBackup(); }
-  backup.state = 'on';
-  // Keep whichever copy is newer.
-  const file = await readBackup().catch(() => null);
-  if (file && (file.savedAt || '') > (state.db.savedAt || '')) {
-    state.db = file; localStorage.setItem(DB_KEY, JSON.stringify(file)); recompute();
-    toast(`Loaded newer data from ${backup.handle.name}`);
-  } else await writeBackup();
-  renderBackup();
-}
-function renderBackup() {
-  const b = $('#btn-backup');
-  b.classList.toggle('hidden', !fsSupported);
-  b.textContent = { off: 'Set up backup file', on: `Backup ✓ ${backup.handle?.name}`, reconnect: 'Reconnect backup file' }[backup.state];
-  b.title = backup.state === 'on' ? 'Every change is also written to this file. Click to choose a different file.'
-    : backup.state === 'reconnect' ? 'Click to allow Skylog to keep writing to your backup file'
-    : 'Mirror your logbook to a JSON file on disk, so it survives clearing browser data';
-  b.classList.toggle('warn', backup.state === 'reconnect');
-}
-$('#btn-backup').onclick = () => backup.state === 'reconnect' ? reconnectBackup() : linkBackup();
+
 function commit(mutate, msg) {
   state.undo.push(JSON.stringify(state.db));
   if (state.undo.length > 30) state.undo.shift();
@@ -1726,6 +1837,102 @@ function undo() {
   if (!prev) return toast('Nothing to undo');
   state.db = JSON.parse(prev); save(); recompute(); toast('Undone');
 }
+
+// ---------- lock & setup screens (hosted mode)
+const gate = $('#gate');
+function showGate(msg, form = null) {
+  gate.classList.remove('hidden');
+  $('#gate-msg').textContent = msg;
+  $('#unlock-form').classList.toggle('hidden', form !== 'unlock');
+  $('#setup-form').classList.toggle('hidden', form !== 'setup');
+  (form === 'unlock' ? $('#u-pass') : form === 'setup' ? $('#s-pass') : null)?.focus();
+}
+
+async function bootHosted() {
+  showGate('Loading…');
+  let remote = null, offline = false;
+  try { remote = await gh.read(); } catch { offline = true; }
+  if (!remote && !offline) {
+    $('#s-token-link').href = 'https://github.com/settings/personal-access-tokens/new';
+    return showGate(`Set up your private flight log. It will be stored encrypted in ${where.owner}/${where.repo}.`, 'setup');
+  }
+  const src = remote || store.get('cache', null);
+  if (!src) return showGate("Can't reach GitHub right now, and this device has no saved copy yet. Check your connection and reload.");
+  sync.sha = src.sha;
+  gate.dataset.vault = JSON.stringify(src.vault);
+  const saved = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
+  if (saved) {
+    try { return await enter(src.vault, await importSession(saved)); }
+    catch { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); }
+  }
+  showGate(offline ? 'Offline: unlocking the copy saved on this device.' : 'This flight log is private.', 'unlock');
+}
+
+async function enter(v, passwordOrSession, remember) {
+  const { session, payload } = await openVault(v, passwordOrSession);
+  Object.assign(sync, { session, token: payload.token || null });
+  state.db = payload.db;
+  const key = await exportSession(session);
+  sessionStorage.setItem(KEY, key);
+  if (remember) localStorage.setItem(KEY, key);
+  // Changes made on this device that never reached GitHub?
+  const pend = store.get('pending', null);
+  if (pend) {
+    try {
+      const mine = (await openVault(pend.vault, session)).payload.db;
+      const keep = pend.baseSha === sync.sha || confirm('This device has changes that were never uploaded, but the log has since changed elsewhere.\n\nOK: keep this device\'s version\nCancel: discard them');
+      if (keep) { state.db = mine; sync.rev++; sync.timer = setTimeout(push, 300); }
+      else store.del('pending');
+    } catch { store.del('pending'); }
+  }
+  gate.classList.add('hidden');
+  delete gate.dataset.vault;
+  start();
+  if (!unsynced()) setSync(sync.token ? 'Saved to GitHub' : 'Read-only: no GitHub token', sync.token ? 'ok' : 'err');
+}
+
+$('#unlock-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('#u-go'); btn.disabled = true; btn.textContent = 'Unlocking…'; $('#u-err').textContent = '';
+  try { await enter(JSON.parse(gate.dataset.vault), $('#u-pass').value, $('#u-remember').checked); $('#u-pass').value = ''; }
+  catch (err) { $('#u-err').textContent = err.message === 'bad-password' ? 'Wrong password.' : 'Could not open the log: ' + err.message; }
+  finally { btn.disabled = false; btn.textContent = 'Unlock'; }
+});
+
+const strengthOf = pw => {
+  let s = Math.min(1, pw.length / 16) * 0.6 + [/[a-z]/, /[A-Z]/, /\d/, /[^\w]/].filter(r => r.test(pw)).length * 0.1;
+  if (/^(.)\1+$/.test(pw) || /password|123456|qwerty/i.test(pw)) s = 0.1;
+  return Math.min(1, s);
+};
+$('#s-pass').addEventListener('input', e => {
+  const s = strengthOf(e.target.value), m = $('#s-meter');
+  m.style.width = s * 100 + '%';
+  m.style.background = s < 0.45 ? 'var(--critical)' : s < 0.75 ? 'var(--warning)' : 'var(--good)';
+});
+$('#setup-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#s-err'), btn = $('#s-go'), pw = $('#s-pass').value, token = $('#s-token').value.trim();
+  err.textContent = '';
+  if (pw !== $('#s-pass2').value) return void (err.textContent = "Passwords don't match.");
+  if (strengthOf(pw) < 0.45) return void (err.textContent = 'Choose a stronger password: longer, or a few random words.');
+  btn.disabled = true; btn.textContent = 'Checking token…';
+  try {
+    const check = await gh.checkToken(token);
+    if (!check.ok) throw new Error(check.reason);
+    let db = { version: 1, flights: [], customAirports: {}, airportLabels: {}, dismissed: [] };
+    const file = $('#s-csv').files[0];
+    if (file) db = { ...db, ...parseImport(await file.text(), file.name).asDb };
+    btn.textContent = 'Encrypting…';
+    const session = await newSession(pw);
+    db.savedAt = new Date().toISOString();
+    const sealed = await seal(session, { db, token });
+    sync.sha = await gh.write(token, sealed, null, 'Create encrypted flight log');
+    store.set('cache', { vault: sealed, sha: sync.sha });
+    await enter(sealed, session);
+    toast(file ? `Your log is set up with ${db.flights.length} flights` : 'Your log is set up. Add or import flights to begin.');
+  } catch (ex) { err.textContent = ex.message; }
+  finally { btn.disabled = false; btn.textContent = 'Create my flight log'; }
+});
 
 // ---------- derived data
 function recompute() {
@@ -1742,94 +1949,79 @@ function recompute() {
   refresh();
 }
 
-function filtered() {
-  const { year, airport, airline, route, aircraft, q } = state.filter;
+const byYear = () => state.all.filter(f => !state.filter.year || f.year === state.filter.year);
+function flightsFiltered() {
+  const { airport, airline, route, aircraft, q } = state.filter;
   const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return state.all.filter(f => (!year || f.year === year) && (!airport || f.from === airport || f.to === airport)
-    && (!airline || f.airline === airline) && (!route || f.routeKey === route)
-    && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t)));
+  return byYear().filter(f => (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
+    && (!route || f.routeKey === route) && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t)));
 }
 
 let current = { list: [], s: null };
 function refresh() {
-  const list = filtered(), s = summarize(list);
+  const list = byYear(), s = summarize(list);
   current = { list, s };
-  renderFilterBar(); renderHud(s); updateMap(s); renderTabs(); renderView();
+  renderNav(); renderYearSelect(); updateMap(s);
+  if (state.page === 'profile') renderProfile(list, s);
+  if (state.page === 'flights') renderFlights();
+  if (state.page === 'check') renderCheck();
 }
+const setFilter = patch => { Object.assign(state.filter, patch); refresh(); };
 
-function setFilter(patch) {
-  Object.assign(state.filter, patch);
+function go(page) {
+  state.page = page; store.set('page', page);
+  for (const p of ['profile', 'flights', 'check']) $('#page-' + p).classList.toggle('hidden', p !== page);
   refresh();
+  if (page === 'profile') map.rerender();
+  scrollTo(0, 0);
 }
+function renderNav() {
+  const open = state.issues.filter(i => !i.dismissed && i.severity !== 'info').length;
+  document.querySelectorAll('#nav button').forEach(b => {
+    if (b.dataset.page === 'check') b.innerHTML = `Data check${open ? `<span class="badge">${open}</span>` : ''}`;
+    if (b.dataset.page === 'flights') b.textContent = 'Flights';
+    b.setAttribute('aria-current', b.dataset.page === state.page ? 'page' : 'false');
+  });
+}
+$('#nav').onclick = e => { const b = e.target.closest('button[data-page]'); if (b) go(b.dataset.page); };
 
-// ---------- header, filters, HUD
-function renderFilterBar() {
+function renderYearSelect() {
   const years = [...new Set(state.all.map(f => f.year))].sort((a, b) => b - a);
-  const cnt = y => state.all.filter(f => f.year === y).length;
-  const f = state.filter;
-  const pills = [];
-  if (f.airport) pills.push(['airport', `Airport: ${f.airport}`]);
-  if (f.airline) pills.push(['airline', `Airline: ${f.airline}`]);
-  if (f.route) pills.push(['route', `Route: ${f.route.replace('–', ' ⇄ ')}`]);
-  if (f.aircraft) pills.push(['aircraft', `Aircraft: ${f.aircraft}`]);
-  if (f.q) pills.push(['q', `“${f.q}”`]);
-  $('#filterbar').innerHTML = `
-    <div class="chips">
-      <button class="chip ${!f.year ? 'on' : ''}" data-act="year" data-v="">All time<span class="c">${state.all.length}</span></button>
-      ${years.map(y => `<button class="chip ${f.year === y ? 'on' : ''}" data-act="year" data-v="${y}">${y}<span class="c">${cnt(y)}</span></button>`).join('')}
-    </div>
-    ${pills.map(([k, l]) => `<span class="pill">${esc(l)}<button data-act="unfilter" data-v="${k}" aria-label="Remove filter">✕</button></span>`).join('')}
-    ${pills.length > 1 ? `<button class="btn small ghost" data-act="clear-filters">Clear all</button>` : ''}`;
+  const html = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  for (const sel of document.querySelectorAll('select[data-year], #year')) {
+    if (sel.dataset.html !== html) { sel.innerHTML = html; sel.dataset.html = html; }
+    sel.value = state.filter.year || '';
+  }
 }
-
-function renderHud(s) {
-  const scope = state.filter.year || (Object.values(state.filter).some(Boolean) ? 'Filtered' : 'All time');
-  $('#hud').innerHTML = [
-    [plural(s.count, 'flight').split(' ')[0], `Flights · ${scope}`],
-    [n0(distNum(s.km)), `${state.units} · ${(s.km / EARTH_KM).toFixed(1)}× Earth`],
-    [durLong(s.minutes), 'In the air'],
-    [s.airports.size, 'Airports'],
-    [s.countries.size, 'Countries'],
-  ].map(([v, k]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
-}
+document.addEventListener('change', e => { if (e.target.matches('#year, select[data-year]')) setFilter({ year: +e.target.value || null }); });
 
 // ---------- map
 const map = createMap($('#map'), {
   tooltip,
-  onRoute: r => setFilter({ route: state.filter.route === r.key ? null : r.key }),
-  onAirport: a => setFilter({ airport: state.filter.airport === a.code ? null : a.code }),
+  onRoute: r => { state.filter.route = r.key; go('flights'); },
+  onAirport: a => { state.filter.airport = a.code; go('flights'); },
 });
 function updateMap(s) {
-  const years = state.all.map(f => f.year);
-  const yearRange = years.length ? [Math.min(...years), Math.max(...years)] : [0, 0];
-  const routes = byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown);
   map.update({
-    routes, fmtDist: dist,
+    routes: byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown), fmtDist: dist,
     airports: byCount(s.airports).filter(a => !a.a.unknown),
     countries: [...s.countries.values()].map(c => c.id).filter(Boolean),
-    yearRange,
   });
-  const lg = $('#legend');
-  if (state.colorBy === 'recency') {
-    const [y0, y1] = yearRange;
-    lg.innerHTML = `Last flown<div class="ramp" style="background:linear-gradient(90deg,var(--route-old),var(--route-new))"></div><div class="ends"><span>${y0}</span><span>${y1}</span></div>`;
-  } else lg.innerHTML = `Line weight = times flown · <span class="muted">click map, then scroll to zoom</span>`;
+  $('#legend').innerHTML = `<b>Times flown</b>${FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('')}`;
   document.querySelectorAll('#seg-mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mapMode));
-  document.querySelectorAll('#seg-color button').forEach(b => b.setAttribute('aria-pressed', b.dataset.color === state.colorBy));
 }
 $('#seg-mode').onclick = e => { const m = e.target.dataset.mode; if (!m) return; state.mapMode = m; store.set('mapMode', m); map.setMode(m); updateMap(current.s); };
-$('#seg-color').onclick = e => { const c = e.target.dataset.color; if (!c) return; state.colorBy = c; store.set('colorBy', c); map.setColorBy(c); updateMap(current.s); };
 $('#btn-reset').onclick = () => map.reset();
 $('#btn-zin').onclick = () => map.zoomBy(1.5);
 $('#btn-zout').onclick = () => map.zoomBy(1 / 1.5);
 
-// Replay
 const speeds = [1, 2, 4, 0.5];
 let speedIx = 0;
 $('#btn-replay').onclick = () => {
   if (map.replaying) return stopReplay();
-  const list = current.list.filter(f => f.path).map(f => ({ ...f, a: f.A, b: f.B }));
-  if (!list.length) return toast('No mappable flights in this view');
+  const counts = new Map([...current.s.routes.values()].map(r => [r.key, r.count]));
+  const list = current.list.filter(f => f.path).map(f => ({ ...f, a: f.A, b: f.B, routeCount: counts.get(f.routeKey) }));
+  if (!list.length) return toast('No flights to replay');
   $('#replay').classList.remove('hidden'); $('#legend').classList.add('hidden');
   $('#btn-replay').textContent = '■ Stop';
   let km = 0, lastI = -1;
@@ -1839,7 +2031,7 @@ $('#btn-replay').onclick = () => {
       const f = list[Math.min(i, list.length - 1)];
       if (i !== lastI) { km = list.slice(0, i).reduce((a, x) => a + x.dist, 0); lastI = i; }
       $('#rp-date').textContent = date(f.date);
-      $('#rp-leg').innerHTML = `${esc(fname(f))} ${f.from} → ${f.to} · ${Math.min(i + 1, list.length)}/${list.length} · ${n0(distNum(km + f.dist * Math.min(t, 1)))} ${state.units}`;
+      $('#rp-leg').textContent = `${fname(f)} ${f.from} → ${f.to} · ${Math.min(i + 1, list.length)}/${list.length} · ${dist(km + f.dist * Math.min(t, 1))}`;
       $('#rp-bar').style.width = ((i + t) / list.length * 100) + '%';
     },
     onEnd: () => { $('#btn-replay').textContent = '▶ Replay'; setTimeout(stopReplay, 1800); },
@@ -1854,189 +2046,184 @@ $('#rp-stop').onclick = stopReplay;
 $('#rp-pause').onclick = e => { const p = e.target.textContent === 'Pause'; map.pauseReplay(p); e.target.textContent = p ? 'Resume' : 'Pause'; };
 $('#rp-speed').onclick = e => { speedIx = (speedIx + 1) % speeds.length; e.target.textContent = speeds[speedIx] + '×'; };
 
-// ---------- tabs
-function renderTabs() {
-  const open = state.issues.filter(i => !i.dismissed && i.severity !== 'info').length;
-  document.querySelectorAll('.tab').forEach(t => {
-    t.setAttribute('aria-selected', t.dataset.tab === state.tab);
-    if (t.dataset.tab === 'health') t.innerHTML = `Data health${open ? `<span class="badge warn">${open}</span>` : ''}`;
-    if (t.dataset.tab === 'flights') t.innerHTML = `Flights<span class="badge">${current.list.length}</span>`;
-  });
-}
-$('#tabs').onclick = e => {
-  const t = e.target.closest('.tab'); if (!t) return;
-  state.tab = t.dataset.tab; store.set('tab', state.tab); renderTabs(); renderView();
-};
+// ---------- profile page
+function renderProfile(list, s) {
+  const dom = list.filter(f => f.A.country && f.A.country === f.B.country).length;
+  const mins = s.minutes, days = mins / 1440;
+  const km = state.units === 'mi' ? s.km / KM_PER_MI : s.km, other = state.units === 'mi' ? s.km : s.km / KM_PER_MI;
+  $('#big-stats').innerHTML = `
+    <div class="big"><div class="v">${s.count.toLocaleString()}<small>flight${s.count === 1 ? '' : 's'}</small></div>
+      <div class="s"><b>${dom}</b> domestic<br><b>${s.count - dom}</b> international</div></div>
+    <div class="big"><div class="v">${n0(km)}<small>${state.units}</small></div>
+      <div class="s"><b>${n0(other)}</b> ${state.units === 'mi' ? 'km' : 'miles'}<br><b>${(s.km / EARTH_KM).toFixed(1)}×</b> around the Earth · <b>${(s.km / MOON_KM).toFixed(2)}×</b> to the Moon</div></div>
+    <div class="big"><div class="v">${Math.floor(mins / 60).toLocaleString()}<small>h</small> ${Math.round(mins % 60)}<small>min</small></div>
+      <div class="s"><b>${days.toFixed(1)}</b> days<br><b>${(days / 365.25).toFixed(3)}</b> years</div></div>
+    <div class="big"><div class="v">${(s.co2 / 1000).toFixed(1)}<small>tons CO₂</small></div>
+      <div class="s"><b>${s.count ? n0(s.co2 / s.count) : 0}</b> kg per flight<br>rough per-passenger estimate</div></div>`;
 
-function renderView() {
-  const { list, s } = current;
-  const v = $('#view');
-  if (!state.all.length) {
-    v.innerHTML = `<div class="empty"><h2>No flights yet</h2><p>Import a myFlightradar24 CSV export or add your first flight.</p>
-      <button class="btn primary" data-act="add">+ Add flight</button> <button class="btn" data-act="import">Import</button></div>`;
-    return;
+  const conts = {};
+  for (const a of s.airports.values()) if (a.a.continent) conts[a.a.continent] = (conts[a.a.continent] || 0) + a.count;
+  const code = (obj, order, labels) => order.map(k => ({ label: labels[k].toLowerCase(), value: obj[k] || 0 }));
+  $('#pies').innerHTML = [
+    ['Class', code(s.cls, [1, 4, 2, 3, 5], CLASSES)],
+    ['Seat', code(s.seatType, [1, 2, 3], SEAT_TYPES).concat(s.seatType[4] || s.seatType[5] ? code(s.seatType, [4, 5], SEAT_TYPES) : [])],
+    ['Reason', code(s.reason, [1, 2, 3, 4], REASONS)],
+    ['Continents', ['Europe', 'Asia', 'North America', 'Oceania', 'South America', 'Africa'].map(c => ({ label: c.replace('North ', 'N ').replace('South ', 'S '), value: conts[c] || 0 }))],
+  ].map(([t, items]) => `<div class="pie-block"><h4>${t}</h4><div class="pie-row">${pie(items)}
+      <div class="pie-legend">${items.map(i => `<div class="${i.value ? '' : 'z'}"><b>${i.value}</b> ${esc(i.label)}</div>`).join('')}</div></div></div>`).join('');
+
+  $('#stats').innerHTML = `<div class="cards">${CARDS.map(c => topCard(c, list)).join('')}</div>
+    <div class="card trend blue"><div class="head"><h3>Flights per year</h3></div><div class="plot" id="ch-year"></div>
+      <div class="foot"><div class="v">${yearsFlying()}</div><div class="k">years of flying</div></div></div>
+    <div class="trend-row">
+      <div class="card trend pink"><div class="head"><h3>Flights per month</h3></div><div class="plot" id="ch-month"></div></div>
+      <div class="card trend pink"><div class="head"><h3>Flights per weekday</h3></div><div class="plot" id="ch-dow"></div></div>
+    </div>`;
+  drawTrends(s);
+  growBars($('#stats'));
+}
+
+function pie(items) {
+  const total = items.reduce((t, i) => t + i.value, 0);
+  if (!total) return `<svg viewBox="-1 -1 2 2"><circle r="1" fill="#eee"/></svg>`;
+  let a0 = -Math.PI / 2;
+  const live = items.map((it, ix) => ({ ...it, color: GRAYS[ix] })).filter(i => i.value);
+  if (live.length === 1) return `<svg viewBox="-1 -1 2 2"><circle r="1" fill="${live[0].color}" data-tip="<b>${esc(live[0].label)}</b> · 100%"/></svg>`;
+  return `<svg viewBox="-1 -1 2 2">${live.map(i => {
+    const a1 = a0 + i.value / total * Math.PI * 2, large = a1 - a0 > Math.PI ? 1 : 0;
+    const d = `M0,0 L${Math.cos(a0)},${Math.sin(a0)} A1,1 0 ${large} 1 ${Math.cos(a1)},${Math.sin(a1)} Z`;
+    a0 = a1;
+    return `<path d="${d}" fill="${i.color}" stroke-width="0.02" data-tip="<b>${esc(i.label)}</b> · ${i.value} (${pct(i.value, total)}%)"/>`;
+  }).join('')}</svg>`;
+}
+
+// Top-list cards. Each aggregates flights by some key; "Flights" counts each flight once per key.
+const CARDS = [
+  { id: 'airports', title: 'Top airports', color: 'green', unit: 'airports', metrics: ['flights'], filter: 'airport',
+    keys: f => [f.from, f.to], label: k => k, sub: (k, f) => (f.from === k ? f.A : f.B).label },
+  { id: 'airlines', title: 'Top airlines', color: 'yellow', unit: 'airlines', metrics: ['flights', 'distance', 'time'], filter: 'airline',
+    keys: f => [f.airline].filter(Boolean), label: (k, f) => f.airlineIata || k.slice(0, 3).toUpperCase(), sub: k => k },
+  { id: 'aircraft', title: 'Top aircraft', color: 'red', unit: 'aircraft', metrics: ['flights', 'distance', 'time'], filter: 'aircraft',
+    keys: f => [f.aircraftCode || f.aircraft].filter(Boolean), label: k => k, sub: (k, f) => f.aircraft },
+  { id: 'routes', title: 'Top routes', color: 'purple', unit: 'routes', metrics: ['flights', 'distance', 'time'], filter: 'route',
+    keys: f => [f.routeKey], label: k => k.replace('–', '-'), sub: (k, f) => `${f.A.city} – ${f.B.city}` },
+  { id: 'countries', title: 'Top countries', color: 'teal', unit: 'countries', metrics: ['flights'],
+    keys: f => [...new Set([f.A.country, f.B.country])].filter(Boolean), label: k => k, sub: k => COUNTRIES[k]?.[0] || k },
+];
+const METRIC_LABEL = { flights: 'Flights', distance: 'Distance', time: 'Time' };
+function aggregate(card, list) {
+  const m = new Map();
+  for (const f of list) for (const k of new Set(card.keys(f))) {
+    if (!m.has(k)) m.set(k, { key: k, label: card.label(k, f), sub: card.sub(k, f), flights: 0, distance: 0, time: 0 });
+    const x = m.get(k); x.flights++; x.distance += f.dist || 0; x.time += f.dur || 0;
   }
-  const views = { overview, flights: flightsView, places, fleet, trips, achievements: achievementsView, health };
-  v.innerHTML = (views[state.tab] || overview)(list, s);
+  return [...m.values()];
 }
+const metricText = (metric, v) => metric === 'distance' ? dist(v) : metric === 'time' ? `${Math.round(v / 60).toLocaleString()} h` : v.toLocaleString();
+const metricShort = (metric, v) => metric === 'distance' ? (state.units === 'mi' ? v / KM_PER_MI : v) >= 10000 ? `${Math.round((state.units === 'mi' ? v / KM_PER_MI : v) / 1000)}k` : n0(state.units === 'mi' ? v / KM_PER_MI : v)
+  : metric === 'time' ? `${Math.round(v / 60)}h` : v;
 
-// ---------- chart building blocks (plain HTML)
-function colChart(items, { values = items.length <= 14, height = 160 } = {}) {
-  const max = Math.max(1, ...items.map(i => i.value));
-  const step = niceStep(max), top = Math.ceil(max / step) * step;
-  const lines = []; for (let v = step; v <= top; v += step) lines.push(v);
-  return `<div class="cols-chart" style="height:${height}px">
-    ${lines.map(v => `<div class="gridline" style="bottom:${v / top * (height - 18)}px"></div>`).join('')}
-    ${items.map(i => `<div class="col ${i.act ? 'click' : ''} ${i.sel ? 'sel' : ''} ${i.faded ? 'faded' : ''}" data-tip="${esc(i.tip)}" ${i.act || ''}>
-      ${values && i.value ? `<span class="val">${i.value}</span>` : ''}
-      <div class="bar" style="height:${i.value / top * (height - 18 - (values ? 16 : 0))}px"></div></div>`).join('')}
-  </div><div class="cols-axis">${items.map(i => `<span>${i.label}</span>`).join('')}</div>`;
-}
-function niceStep(max) {
-  const raw = max / 4, p = 10 ** Math.floor(Math.log10(raw)), n = raw / p;
-  return Math.max(1, (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p);
-}
-function hbars(items, { limit = 8, key } = {}) {
-  const max = Math.max(1, ...items.map(i => i.value));
-  const all = key && state.showAll[key];
-  const shown = all ? items : items.slice(0, limit);
-  return `<div class="hbars">${shown.map(i => `<div class="hbar" ${i.act || ''} data-tip="${esc(i.tip || '')}">
-      <div class="lbl">${i.label}</div><div class="track"><div class="fill" style="width:${i.value / max * 100}%"></div></div><div class="n">${i.display ?? i.value}</div></div>`).join('')}</div>
-    ${key && items.length > limit ? `<button class="btn small ghost more" data-act="showall" data-v="${key}">${all ? 'Show fewer' : `Show all ${items.length}`}</button>` : ''}`;
-}
-function split(name, entries) {
-  const total = entries.reduce((t, e) => t + e.value, 0) || 1;
-  const live = entries.filter(e => e.value);
-  return `<div class="split"><div class="name">${name}</div>
-    <div class="stack">${live.map((e, i) => `<div style="flex:${e.value};background:${e.color || SERIES[i]}" data-tip="<b>${esc(e.label)}</b> · ${e.value} (${pct(e.value, total)}%)${e.sub ? `<div class='t-sub'>${esc(e.sub)}</div>` : ''}"></div>`).join('')}</div>
-    <div class="keys">${live.map((e, i) => `<span><i style="background:${e.color || SERIES[i]}"></i>${esc(e.label)} <b>${pct(e.value, total)}%</b></span>`).join('')}</div></div>`;
-}
-const codeSplit = (obj, labels) => Object.entries(obj).filter(([k]) => +k && labels[k]).sort((a, b) => +a[0] - +b[0])
-  .map(([k, v]) => ({ label: labels[k], value: v }))
-  .concat(obj[0] ? [{ label: 'Not set', value: obj[0], color: 'var(--axis)' }] : []);
-const tile = (v, k, x = '') => `<div class="card tile"><div class="v">${v}</div><div class="k">${k}</div>${x ? `<div class="x">${x}</div>` : ''}</div>`;
-const flightRef = f => `<button class="tag mono" data-act="edit" data-id="${f.id}" data-tip="${esc(`${f.A.label} → ${f.B.label}<div class='t-sub'>${date(f.date)} · ${f.airline || ''}</div>`)}">${esc(fname(f))} ${f.from}→${f.to}</button>`;
-
-// ---------- views
-function overview(list, s) {
-  if (!list.length) return `<div class="empty">No flights match these filters.</div>`;
-  const out = [];
-  if (state.filter.year) out.push(yearReview(list, s));
-  const topRoute = byCount(s.routes)[0], topAp = byCount(s.airports)[0], topAl = byCount(s.airlines)[0], topAc = byCount(s.aircraft)[0];
-  out.push(`<div class="grid g-tiles">
-    ${tile(s.count.toLocaleString(), 'Flights', `${(s.count / Math.max(1, new Set(list.map(f => f.year)).size)).toFixed(1)} per year`)}
-    ${tile(dist(s.km), 'Distance flown', `${(s.km / EARTH_KM).toFixed(2)}× around Earth · ${pct(s.km, MOON_KM)}% to the Moon`)}
-    ${tile(durLong(s.minutes), 'Time in the air', `${(s.minutes / 60).toFixed(0)} hours · avg ${dur(s.minutes / s.count)}`)}
-    ${tile(s.airports.size, 'Airports', `${s.countries.size} countries · ${s.continents.size} continents`)}
-    ${tile(s.airlines.size, 'Airlines', `${Object.keys(s.alliance).filter(k => k !== 'Unaffiliated').length} alliances`)}
-    ${tile(s.aircraft.size, 'Aircraft types', `${s.regs.size} tails logged`)}
-    ${tile(s.routes.size, 'Unique routes', `${list.filter(f => f.dateline).length} date-line crossings`)}
-    ${tile(`${(s.co2 / 1000).toFixed(1)} t`, 'CO₂ (rough estimate)', 'per-passenger, distance & class based')}
-  </div>`);
-  const rec = (k, v, d, f) => `<div class="record"><div class="k">${k}</div><div><div class="v">${v}</div><div class="d">${d}</div></div>${f ? '' : ''}</div>`;
-  out.push(`<h3 class="section-title">Records</h3><div class="card"><div class="records">
-    ${s.longest ? rec('Longest flight', `${fname(s.longest)} ${s.longest.from} → ${s.longest.to}`, `${dist(s.longest.dist)} · ${date(s.longest.date)}`) : ''}
-    ${s.longestTime ? rec('Longest in the air', `${dur(s.longestTime.dur)}`, `${fname(s.longestTime)} ${s.longestTime.from} → ${s.longestTime.to} · ${date(s.longestTime.date)}`) : ''}
-    ${s.shortest ? rec('Shortest flight', `${fname(s.shortest)} ${s.shortest.from} → ${s.shortest.to}`, `${dist(s.shortest.dist)} · ${date(s.shortest.date)}`) : ''}
-    ${s.north ? rec('Farthest north', `${s.north.maxLat.toFixed(1)}°N`, `over the route ${s.north.from} → ${s.north.to}`) : ''}
-    ${s.south ? rec('Farthest south', `${Math.abs(s.south.minLat).toFixed(1)}°${s.south.minLat < 0 ? 'S' : 'N'}`, `${s.south.from} → ${s.south.to}`) : ''}
-    ${topRoute ? rec('Most-flown route', `${topRoute.a.iata} ⇄ ${topRoute.b.iata}`, `${plural(topRoute.count, 'flight')} · ${topRoute.a.city} – ${topRoute.b.city}`) : ''}
-    ${topAp ? rec('Home base', `${topAp.code}`, `${topAp.a.label} · ${plural(topAp.count, 'visit')}`) : ''}
-    ${topAl ? rec('Favorite airline', esc(topAl.name), `${plural(topAl.count, 'flight')} · ${dist(topAl.km)}`) : ''}
-    ${topAc ? rec('Favorite aircraft', esc(topAc.name), `${plural(topAc.count, 'flight')}`) : ''}
-  </div></div>`);
-
-  // Charts
-  const allYears = summarize(state.all.filter(f => matchesExceptYear(f))).years;
-  const ys = [...allYears.keys()].sort();
-  const yr = ys.length ? Array.from({ length: ys.at(-1) - ys[0] + 1 }, (_, i) => ys[0] + i) : [];
-  const yearItems = yr.map(y => {
-    const d = allYears.get(y) || { count: 0, km: 0, minutes: 0 };
-    return { label: `’${String(y).slice(2)}`, value: d.count, sel: state.filter.year === y, faded: state.filter.year && state.filter.year !== y,
-      tip: `<b>${y}</b> · ${plural(d.count, 'flight')}<div class='t-sub'>${dist(d.km)} · ${durLong(d.minutes)} in the air</div>`, act: `data-act="year" data-v="${state.filter.year === y ? '' : y}"` };
-  });
-  out.push(`<h3 class="section-title">When you fly</h3><div class="grid g-2">
-    <div class="card"><h3>Flights per year</h3><div class="sub">Click a year to see its review</div>${colChart(yearItems)}</div>
-    <div class="card"><h3>Activity</h3><div class="sub">Flights per month, every year</div>${heatmap(state.all.filter(f => matchesExceptYear(f)))}</div>
-  </div><div class="grid g-3" style="margin-top:16px">
-    <div class="card"><h3>Month</h3><div class="sub">All years combined</div>${colChart(s.months.map((v, i) => ({ label: MONTHS[i][0], value: v, tip: `<b>${MONTHS[i]}</b> · ${plural(v, 'flight')}` })))}</div>
-    <div class="card"><h3>Day of week</h3><div class="sub">By departure date</div>${colChart(s.dows.map((v, i) => ({ label: DOWS[i], value: v, tip: `<b>${DOWS[i]}</b> · ${plural(v, 'flight')}` })))}</div>
-    <div class="card"><h3>Departure hour</h3><div class="sub">Local time at origin</div>${colChart(s.hours.map((v, i) => ({ label: i % 6 === 0 ? String(i).padStart(2, '0') : '', value: v, tip: `<b>${String(i).padStart(2, '0')}:00–${String(i).padStart(2, '0')}:59</b> · ${plural(v, 'departure')}` })), { values: false })}</div>
-  </div>`);
-  out.push(`<h3 class="section-title">How you fly</h3><div class="grid g-2">
-    <div class="card">
-      ${split('Seat', codeSplit(s.seatType, SEAT_TYPES))}
-      ${split('Class', codeSplit(s.cls, CLASSES))}
-      ${split('Reason', codeSplit(s.reason, REASONS))}
-      ${split('Haul', HAULS.map(h => ({ label: h, value: s.haul[h] || 0, sub: HAUL_RANGES[h] })))}
-      ${split('Alliance', ['Star Alliance', 'SkyTeam', 'oneworld', 'Unaffiliated'].map((k, i) => ({ label: k, value: s.alliance[k] || 0, color: i === 3 ? 'var(--axis)' : SERIES[i] })))}
+function topCard(card, list) {
+  const metric = state.cardMetric[card.id] || 'flights';
+  const items = aggregate(card, list).sort((a, b) => b[metric] - a[metric] || b.flights - a.flights);
+  const top = items.slice(0, 7), max = top[0]?.[metric] || 1;
+  return `<div class="card top-card c-${card.color}">
+    <div class="head"><h3>${card.title}</h3>
+      <button class="expand" data-act="compare" data-v="${card.id}" aria-label="Compare all ${card.unit}" data-tip="Compare all">
+        <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M14 3h7v7h-2V6.4l-6.3 6.3-1.4-1.4L17.6 5H14zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg></button>
+      <div class="rows">${top.map(i => `<div class="row" data-act="${card.filter ? 'card-filter' : 'compare'}" data-card="${card.id}" data-v="${esc(i.key)}" data-tip="<b>${esc(i.sub)}</b><div class='t-sub'>${metricText(metric, i[metric])}</div>">
+        <span class="lbl">${esc(i.label)}</span><span class="barcell"><span class="bar" data-w="${i[metric] / max * 100}"></span><span class="n">${metricShort(metric, i[metric])}</span></span></div>`).join('')
+        || '<div class="row"><span class="lbl">—</span></div>'}</div>
     </div>
-    <div class="card"><h3>Top routes</h3><div class="sub">Both directions combined</div>
-      ${hbars(byCount(s.routes).map(r => ({ label: `<span class="mono">${r.a.iata} ⇄ ${r.b.iata}</span> <span class="muted">${esc(r.a.city)} – ${esc(r.b.city)}</span>`, value: r.count, tip: `${dist(r.km)} each way`, act: `data-act="route" data-v="${r.key}"` })), { limit: 10, key: 'ov-routes' })}
-    </div>
-  </div>`);
-  return out.join('');
-}
-
-function matchesExceptYear(f) {
-  const y = state.filter.year; state.filter.year = null;
-  const ok = filteredOne(f); state.filter.year = y; return ok;
-}
-function filteredOne(f) {
-  const { year, airport, airline, route, aircraft, q } = state.filter;
-  const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return (!year || f.year === year) && (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
-    && (!route || f.routeKey === route) && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t));
-}
-
-function heatmap(list) {
-  const counts = new Map();
-  for (const f of list) counts.set(`${f.year}-${f.month}`, (counts.get(`${f.year}-${f.month}`) || 0) + 1);
-  const years = [...new Set(list.map(f => f.year))].sort();
-  if (!years.length) return '';
-  const all = Array.from({ length: years.at(-1) - years[0] + 1 }, (_, i) => years[0] + i);
-  const max = Math.max(1, ...counts.values());
-  const step = v => v === 0 ? 0 : Math.min(5, 1 + Math.floor((v - 1) / max * 5));
-  return `<div class="heat" style="grid-template-columns:36px repeat(12,1fr)">
-    <span></span>${MONTHS.map(m => `<span class="h">${m[0]}</span>`).join('')}
-    ${all.map(y => `<span class="y" data-act="year" data-v="${y}">${y}</span>${MONTHS.map((m, i) => {
-      const v = counts.get(`${y}-${i}`) || 0;
-      return `<span class="c" style="background:var(--seq-${step(v)})" data-tip="<b>${m} ${y}</b> · ${plural(v, 'flight')}"></span>`;
-    }).join('')}`).join('')}
-  </div><div class="heat-legend">Fewer ${[0, 1, 2, 3, 4, 5].map(i => `<i style="background:var(--seq-${i})"></i>`).join('')} More</div>`;
-}
-
-function yearReview(list, s) {
-  const y = state.filter.year, fr = firsts(state.all, list);
-  const prev = state.all.filter(f => f.year === y - 1), prevKm = prev.reduce((t, f) => t + (f.dist || 0), 0);
-  const delta = prev.length ? Math.round((s.km - prevKm) / prevKm * 100) : null;
-  const tags = arr => arr.length ? `<div class="tagrow">${arr.slice(0, 18).map(t => `<span class="tag">${esc(t)}</span>`).join('')}${arr.length > 18 ? `<span class="muted">+${arr.length - 18}</span>` : ''}</div>` : '<span class="muted">None</span>';
-  const topRoute = byCount(s.routes)[0];
-  return `<div class="review">
-    <h2>${y} in the air</h2>
-    <div class="lede">${plural(s.count, 'flight')} · ${dist(s.km)} · ${durLong(s.minutes)} airborne${delta != null ? ` · <span data-tip="Distance vs ${y - 1}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}% vs ${y - 1}</span>` : ''}</div>
-    <div class="cols">
-      <div><div class="k">New airports</div>${tags(fr.airports)}</div>
-      <div><div class="k">New countries</div>${tags(fr.countries)}</div>
-      <div><div class="k">New airlines</div>${tags(fr.airlines)}</div>
-      <div><div class="k">New aircraft types</div>${tags(fr.aircraft)}</div>
-      <div><div class="k">Most-flown route</div>${topRoute ? `<b>${topRoute.a.iata} ⇄ ${topRoute.b.iata}</b> <span class="muted">×${topRoute.count}</span>` : '—'}</div>
-      <div><div class="k">Longest flight</div>${s.longest ? `<b>${esc(fname(s.longest))} ${s.longest.from}→${s.longest.to}</b> <span class="muted">${dist(s.longest.dist)}</span>` : '—'}</div>
+    <div class="foot"><div><div class="v">${items.length}</div><div class="k">total ${card.unit}</div></div>
+      ${card.metrics.length > 1 ? `<div class="toggles">${card.metrics.slice(0, 2).map(mt => `<button class="pill ${mt === metric ? 'on' : ''}" data-act="card-metric" data-card="${card.id}" data-v="${mt}">${METRIC_LABEL[mt]}</button>`).join('')}</div>` : ''}
     </div></div>`;
 }
+const growBars = root => setTimeout(() => root.querySelectorAll('[data-w]').forEach(b => { b.style.width = `calc(${b.dataset.w}% - ${b.dataset.w * 0.34}px)`; }), 30);
 
+// Full comparison for one card, as a pop-up bar chart.
+function openCompare(id, metric) {
+  const card = CARDS.find(c => c.id === id);
+  metric ||= state.cardMetric[id] || 'flights';
+  const items = aggregate(card, current.list).sort((a, b) => b[metric] - a[metric] || b.flights - a.flights);
+  const total = items.reduce((t, i) => t + i[metric], 0), max = items[0]?.[metric] || 1;
+  $('#compare').innerHTML = `<div class="head" style="background:linear-gradient(180deg,var(--${card.color}-1),var(--${card.color}-2))">
+      <h2>${card.title.replace('Top ', 'All ')} · ${state.filter.year || 'all years'}</h2>
+      <div class="metrics">${['flights', 'distance', 'time'].map(mt => `<button class="pill ${mt === metric ? 'on' : ''}" data-cmp="${id}" data-v="${mt}">${METRIC_LABEL[mt]}</button>`).join('')}</div>
+      <button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="body">${items.map((i, ix) => `<div class="cmp-row" ${card.filter ? `data-cmp-filter="${card.filter}" data-v="${esc(i.key)}"` : ''}>
+        <div class="lbl"><b>${esc(i.label)}</b><span class="muted">${esc(i.sub !== i.label ? i.sub : '')}</span></div>
+        <div class="track"><div class="fill" data-w="${i[metric] / max * 100}" style="background:var(--${card.color}-1);transition-delay:${Math.min(ix, 20) * 18}ms"></div></div>
+        <div class="val">${metricText(metric, i[metric])}<small>${pct(i[metric], total)}%</small></div></div>`).join('') || '<div class="empty">Nothing here yet.</div>'}</div>`;
+  const dlg = $('#dlg-compare');
+  if (!dlg.open) dlg.showModal();
+  setTimeout(() => dlg.querySelectorAll('.fill').forEach(b => { b.style.width = b.dataset.w + '%'; }), 30);
+}
+$('#dlg-compare').addEventListener('click', e => {
+  const dlg = $('#dlg-compare');
+  if (e.target === dlg || e.target.closest('[data-close]')) return dlg.close();
+  const m = e.target.closest('[data-cmp]'); if (m) return openCompare(m.dataset.cmp, m.dataset.v);
+  const f = e.target.closest('[data-cmp-filter]');
+  if (f) { dlg.close(); state.filter[f.dataset.cmpFilter] = f.dataset.v; go('flights'); }
+});
+
+function yearsFlying() {
+  const ys = state.all.map(f => f.year);
+  return ys.length ? Math.max(...ys) - Math.min(...ys) + 1 : 0;
+}
+// Smooth white line-and-area charts on the colored cards.
+function drawTrends(s) {
+  const ys = state.all.map(f => f.year);
+  const all = summarize(state.all).years;
+  const years = ys.length ? Array.from({ length: Math.max(...ys) - Math.min(...ys) + 1 }, (_, i) => Math.min(...ys) + i) : [];
+  trend($('#ch-year'), years.map(y => ({ label: String(y), value: all.get(y)?.count || 0, sel: state.filter.year === y, year: y,
+    tip: `<b>${y}</b> · ${plural(all.get(y)?.count || 0, 'flight')}<div class='t-sub'>${dist(all.get(y)?.km || 0)}</div>` })), 170);
+  trend($('#ch-month'), s.months.map((v, i) => ({ label: MONTHS[i], value: v, tip: `<b>${MONTHS[i]}</b> · ${plural(v, 'flight')}` })), 140);
+  trend($('#ch-dow'), s.dows.map((v, i) => ({ label: DOWS[i], value: v, tip: `<b>${DOWS[i]}</b> · ${plural(v, 'flight')}` })), 140);
+}
+function trend(el, pts, H) {
+  if (!el) return;
+  const W = Math.max(280, el.clientWidth - 32), padL = 26, padB = 22, padT = 14;
+  const max = Math.max(1, ...pts.map(p => p.value)), step = niceStep(max), top = Math.ceil(max / step) * step;
+  const x = i => padL + (pts.length < 2 ? (W - padL) / 2 : i * (W - padL - 8) / (pts.length - 1));
+  const y = v => padT + (1 - v / top) * (H - padT - padB);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.value)}`).join('');
+  const grid = []; for (let v = 0; v <= top; v += step) grid.push(v);
+  const every = Math.ceil(pts.length / Math.max(1, Math.floor(W / 46)));
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">
+    ${grid.map(v => `<line class="grid" x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${padL - 6}" y="${y(v) + 3.5}" text-anchor="end">${v}</text>`).join('')}
+    ${pts.length ? `<path class="area" d="${line}L${x(pts.length - 1)},${y(0)}L${x(0)},${y(0)}Z"/><path class="line" d="${line}"/>` : ''}
+    ${pts.map((p, i) => `<rect class="hit" x="${x(i) - 14}" y="0" width="28" height="${H - padB}" data-tip="${esc(p.tip)}" ${p.year ? `data-act="year-pick" data-v="${p.year}"` : ''}/>
+      <circle class="dot ${p.sel ? 'sel' : ''}" cx="${x(i)}" cy="${y(p.value)}" r="4"/>
+      ${i % every === 0 ? `<text x="${x(i)}" y="${H - 5}" text-anchor="middle">${p.label}</text>` : ''}`).join('')}
+  </svg>`;
+}
+function niceStep(max) {
+  const raw = max / 3, p = 10 ** Math.floor(Math.log10(raw)), n = raw / p;
+  return Math.max(1, (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p);
+}
+let resizeTimer;
+new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (state.page === 'profile' && current.s) drawTrends(current.s); }, 120); }).observe($('#stats'));
+
+// ---------- flights page
 const COLS = [
   ['sortTime', 'Date'], ['flightNumber', 'Flight'], ['from', 'From'], ['to', 'To'], ['depTime', 'Dep'], ['arrTime', 'Arr'],
   ['dur', 'Duration', 'r'], ['dist', 'Distance', 'r'], ['airline', 'Airline'], ['aircraft', 'Aircraft'], ['registration', 'Reg'],
   ['seat', 'Seat'], ['cls', 'Class'], ['reason', 'Reason'], ['note', 'Note'],
 ];
-function flightsView(list) {
+function renderFlights() {
+  const list = flightsFiltered();
   const { key, dir } = state.sort;
   const rows = [...list].sort((a, b) => {
     const x = a[key] ?? '', y = b[key] ?? '';
     return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y))) * dir || (a.sortTime - b.sortTime) * dir;
   });
-  const sevColor = { error: 'var(--critical)', warn: 'var(--warning)', info: 'var(--muted)' };
+  const sevColor = { error: 'var(--critical)', warn: 'var(--warning)', info: '#9aa0a6' };
+  const f0 = state.filter, chips = [];
+  if (f0.airport) chips.push(['airport', `Airport: ${f0.airport}`]);
+  if (f0.airline) chips.push(['airline', `Airline: ${f0.airline}`]);
+  if (f0.route) chips.push(['route', `Route: ${f0.route.replace('–', ' ⇄ ')}`]);
+  if (f0.aircraft) chips.push(['aircraft', `Aircraft: ${f0.aircraft}`]);
   let lastYear = null;
   const body = rows.map(f => {
     let sep = '';
@@ -2048,117 +2235,35 @@ function flightsView(list) {
     const iss = state.issueBy.get(f.id);
     const seat = [f.seat, SEAT_TYPES[f.seatType]].filter(Boolean).join(' · ');
     return sep + `<tr data-act="edit" data-id="${f.id}" data-route="${f.routeKey}">
-      <td class="num">${f.date}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data health</div>"></span>` : ''}</td>
+      <td class="num">${f.date}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data check</div>"></span>` : ''}</td>
       <td class="mono">${esc(f.flightNumber)}</td>
-      <td data-tip="${esc(f.A.label)}"><span class="mono">${f.from}</span> <span class="muted">${esc(f.A.city)}</span></td>
-      <td data-tip="${esc(f.B.label)}"><span class="mono">${f.to}</span> <span class="muted">${esc(f.B.city)}</span></td>
+      <td data-tip="${esc(f.A.label)}"><b>${f.from}</b> <span class="muted">${esc(f.A.city)}</span></td>
+      <td data-tip="${esc(f.B.label)}"><b>${f.to}</b> <span class="muted">${esc(f.B.city)}</span></td>
       <td class="num">${f.depTime || ''}</td><td class="num">${f.arrTime || ''}</td>
-      <td class="r num ${f.durSource !== 'logged' ? 'est' : ''}" ${f.durSource !== 'logged' ? `data-tip="${f.durSource === 'timezones' ? 'Computed from times & time zones' : 'Estimated from distance'}"` : ''}>${f.durSource === 'estimate' ? '~' : ''}${dur(f.dur)}</td>
+      <td class="r num ${f.durSource !== 'logged' ? 'est' : ''}" ${f.durSource !== 'logged' ? `data-tip="${f.durSource === 'timezones' ? 'Computed from times &amp; time zones' : 'Estimated from distance'}"` : ''}>${f.durSource === 'estimate' ? '~' : ''}${dur(f.dur)}</td>
       <td class="r num">${dist(f.dist)}</td>
       <td>${esc(f.airline)}</td><td data-tip="${esc(f.aircraftCode)}">${esc(f.aircraft)}</td>
       <td class="mono">${esc(f.registration)}</td><td>${esc(seat)}</td><td>${CLASSES[f.cls] || ''}</td><td>${REASONS[f.reason] || ''}</td>
       <td class="muted">${esc(f.note)}</td></tr>`;
   }).join('');
-  return `<div class="toolbar"><span class="count">${plural(list.length, 'flight')} · ${dist(list.reduce((t, f) => t + (f.dist || 0), 0))}</span>
-    <div class="spacer"></div><span class="muted">Click a row to edit · <kbd>N</kbd> new · <kbd>/</kbd> search</span>
-    <button class="btn primary small" data-act="add">+ Add flight</button></div>
+  const page = $('#page-flights');
+  const hadFocus = document.activeElement?.id === 'search';
+  page.innerHTML = `<div class="toolbar">
+      <input class="search" id="search" type="search" placeholder="Search flights, airports, tails…" value="${esc(state.filter.q)}">
+      <select data-year aria-label="Year"></select>
+      ${chips.map(([k, l]) => `<span class="chipf">${esc(l)}<button data-act="unfilter" data-v="${k}" aria-label="Remove filter">✕</button></span>`).join('')}
+      <span class="muted">${plural(list.length, 'flight')} · ${dist(list.reduce((t, f) => t + (f.dist || 0), 0))}</span>
+      <div class="spacer"></div><span class="muted">Click a row to edit · <kbd>N</kbd> new · <kbd>/</kbd> search</span></div>
     <div class="table-wrap"><table><thead><tr>${COLS.map(([k, l, c]) => `<th class="${c || ''} ${key === k ? 'sorted' + (dir > 0 ? ' asc' : '') : ''}" data-act="sort" data-v="${k}">${l}</th>`).join('')}</tr></thead>
     <tbody>${body || `<tr><td colspan="${COLS.length}" class="empty">No flights match.</td></tr>`}</tbody></table></div>`;
+  renderYearSelect();
+  const s = $('#search');
+  s.oninput = () => { clearTimeout(s.t); s.t = setTimeout(() => { state.filter.q = s.value; renderFlights(); }, 150); };
+  if (hadFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
-function places(list, s) {
-  const aps = byCount(s.airports);
-  const ctry = [...s.countries.values()].sort((a, b) => b.count - a.count);
-  const cont = {}; for (const a of aps) if (a.a.continent) cont[a.a.continent] = (cont[a.a.continent] || 0) + a.count;
-  const custom = Object.values(state.db.customAirports || {});
-  return `<div class="grid g-2">
-    <div class="card"><div class="card-head"><h3>Airports</h3><span class="muted">${aps.length} visited · click to filter</span></div>
-      ${hbars(aps.map(a => ({ label: `<span class="mono">${a.code}</span> <span class="muted">${esc(a.a.label)}${a.a.unknown ? ' ⚠' : ''}</span>`, value: a.count,
-        tip: `<b>${a.code}</b> · ${esc(a.a.label)}<div class='t-sub'>${a.deps} departures · ${a.arrs} arrivals · first ${a.first}, last ${a.last}</div>`, act: `data-act="airport" data-v="${a.code}"` })), { limit: 15, key: 'aps' })}
-    </div>
-    <div>
-      <div class="card"><div class="card-head"><h3>Countries &amp; territories</h3><span class="muted">${ctry.length} visited</span></div>
-        ${hbars(ctry.map(c => ({ label: `${esc(c.name)} <span class="muted">${c.airports.size} airport${c.airports.size > 1 ? 's' : ''}</span>`, value: c.count, tip: `Airports: ${[...c.airports].join(', ')}` })), { limit: 12, key: 'ctry' })}
-        <div style="margin-top:16px">${split('Continents (airport visits)', Object.entries(cont).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v })))}</div>
-      </div>
-      <div class="card" style="margin-top:16px"><div class="card-head"><h3>Custom airports</h3><button class="btn small" data-act="add-airport">+ Add airport</button></div>
-        ${custom.length ? custom.map(a => `<div class="record"><div class="k mono">${esc(a.iata)}</div><div><div class="v">${esc(a.city)} / ${esc(a.name)}</div><div class="d">${a.lat}, ${a.lon} · ${esc(a.tz || 'no time zone')}</div></div><div class="spacer"></div><button class="btn small" data-act="edit-airport" data-v="${esc(a.iata)}">Edit</button></div>`).join('')
-        : '<div class="muted">Airports outside the built-in list can be added here, with coordinates and time zone.</div>'}
-      </div>
-    </div></div>`;
-}
-
-function fleet(list, s) {
-  const airlines = byCount(s.airlines), aircraft = byCount(s.aircraft);
-  const tails = new Map();
-  for (const f of list) if (f.registration) {
-    if (!tails.has(f.registration)) tails.set(f.registration, { reg: f.registration, count: 0, f, dates: [] });
-    const t = tails.get(f.registration); t.count++; t.dates.push(f.date);
-  }
-  const tl = [...tails.values()].sort((a, b) => b.count - a.count || b.f.sortTime - a.f.sortTime);
-  return `<div class="grid g-2">
-    <div class="card"><div class="card-head"><h3>Airlines</h3><span class="muted">${airlines.length} flown · click to filter</span></div>
-      ${hbars(airlines.map(a => ({ label: `${esc(a.name)} <span class="muted mono">${esc(a.iata)}</span>`, value: a.count, tip: `${dist(a.km)} · first flown ${a.first}`, act: `data-act="airline" data-v="${esc(a.name)}"` })), { limit: 12, key: 'airlines' })}
-    </div>
-    <div class="card"><div class="card-head"><h3>Aircraft types</h3><span class="muted">${aircraft.length} types</span></div>
-      ${hbars(aircraft.map(a => ({ label: `${esc(a.name)} <span class="muted mono">${esc(a.code)}</span>`, value: a.count, tip: `${dist(a.km)}${a.regs.size ? ` · tails: ${[...a.regs].join(', ')}` : ''}`, act: `data-act="aircraft" data-v="${esc(a.code || a.name)}"` })), { limit: 12, key: 'aircraft' })}
-    </div>
-    <div class="card">
-      ${split('Manufacturer', byCount(s.manufacturer).slice(0, 7).map(m => ({ label: m.name, value: m.count })))}
-      ${split('Alliance', ['Star Alliance', 'SkyTeam', 'oneworld', 'Unaffiliated'].map((k, i) => ({ label: k, value: s.alliance[k] || 0, color: i === 3 ? 'var(--axis)' : SERIES[i] })))}
-      <div style="margin-top:16px">${split('Wide-body vs narrow-body', [
-        { label: 'Wide-body', value: list.filter(f => /^(A3[3-5]|A38|B7[4-8]|B77|B78)/.test(f.aircraftCode)).length },
-        { label: 'Narrow-body', value: list.filter(f => /^(A2|A3[12]|A19|A20|A21|A22|B7[1-3]|B3|B75|E1|E7|E9|CRJ|C[0-9]|BCS)/.test(f.aircraftCode)).length },
-        { label: 'Turboprop & other', value: list.filter(f => f.aircraftCode && !/^(A3[3-5]|A38|B7|B3|A2|A3[12]|A19|A20|A21|A22|E1|E7|E9|CRJ|BCS)/.test(f.aircraftCode)).length },
-      ])}</div>
-    </div>
-    <div class="card"><div class="card-head"><h3>Tail numbers</h3><span class="muted">${tl.length} logged · ${pct(list.filter(f => f.registration).length, list.length)}% of flights</span></div>
-      ${tl.length ? `<div class="table-wrap" style="max-height:360px"><table><thead><tr><th>Registration</th><th>Type</th><th>Airline</th><th class="r">Flown</th><th>Last</th></tr></thead><tbody>
-        ${tl.map(t => `<tr data-act="edit" data-id="${t.f.id}"><td class="mono">${esc(t.reg)}</td><td>${esc(t.f.aircraftCode)}</td><td>${esc(t.f.airline)}</td><td class="r">${t.count > 1 ? `<b>${t.count}×</b>` : '1×'}</td><td class="num">${t.dates.at(-1)}</td></tr>`).join('')}
-      </tbody></table></div>` : '<div class="muted">Add registrations to your flights to track individual aircraft.</div>'}
-    </div></div>`;
-}
-
-function trips(list, s) {
-  const js = journeys(list);
-  const multi = js.filter(j => j.legs.length > 1);
-  const shown = (state.tripsAll ? js : multi).slice().reverse();
-  const longest = [...js].sort((a, b) => b.total - a.total)[0];
-  return `<div class="grid g-tiles" style="margin-bottom:16px">
-    ${tile(js.length, 'Journeys', 'legs joined when you connect within 24 h')}
-    ${tile(multi.length, 'With connections', `${pct(multi.length, js.length)}% of journeys`)}
-    ${tile(longest ? durLong(longest.total) : '—', 'Longest door-to-door', longest ? `${longest.legs[0].from} → ${longest.legs.at(-1).to}` : '')}
-    ${tile(s.routes.size, 'Unique routes', `${[...s.routes.values()].filter(r => r.count > 1).length} flown more than once`)}
-  </div>
-  <div class="grid g-2">
-    <div class="card"><div class="card-head"><h3>Journeys</h3>
-      <button class="btn small" data-act="trips-all">${state.tripsAll ? 'Only connections' : 'Show single legs too'}</button></div>
-      ${shown.map(j => {
-        const codes = [j.legs[0].from, ...j.legs.map(f => f.to)];
-        const detour = j.direct ? j.km / j.direct : null;
-        return `<div class="journey" data-act="edit" data-id="${j.legs[0].id}" data-route="${j.legs.map(f => f.routeKey).join(' ')}">
-          <div class="num">${j.legs[0].date}</div>
-          <div class="legs">${codes.map((c, i) => `<span class="code">${c}</span>${i < codes.length - 1 ? `<span class="arrow" data-tip="${esc(fname(j.legs[i]))} · ${dur(j.legs[i].dur)}">→</span>` : ''}`).join('')}</div>
-          <div class="meta">${dist(j.km)} · ${durLong(j.total)} door-to-door${detour && j.legs.length > 1 ? `<br><span class="muted" data-tip="Distance flown vs. a direct flight">${detour.toFixed(2)}× direct</span>` : ''}</div></div>`;
-      }).join('') || '<div class="muted">No multi-leg journeys in this view.</div>'}
-    </div>
-    <div class="card"><div class="card-head"><h3>Routes</h3><span class="muted">click to filter</span></div>
-      ${hbars(byCount(s.routes).map(r => ({ label: `<span class="mono">${r.a.iata} ⇄ ${r.b.iata}</span> <span class="muted">${dist(r.km)}</span>`, value: r.count, act: `data-act="route" data-v="${r.key}"`, tip: `${esc(r.a.label)} – ${esc(r.b.label)}` })), { limit: 20, key: 'routes' })}
-    </div></div>`;
-}
-
-function achievementsView() {
-  const s = summarize(state.all), list = achievements(state.all, s);
-  const got = list.filter(a => a.got).length;
-  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>${got} of ${list.length} unlocked</h3><span class="muted">All-time, regardless of filters</span></div>
-    <div class="meter"><i style="width:${pct(got, list.length)}%"></i></div></div>
-    <div class="ach-grid">${list.sort((a, b) => b.got - a.got || (b.progress || 0) - (a.progress || 0)).map(a => `<div class="ach ${a.got ? '' : 'locked'}">
-      <div class="ic">${a.icon}</div><div style="flex:1"><div class="t">${a.title}</div><div class="d">${a.desc}</div>
-      ${a.got ? '<div class="got">✓ Unlocked</div>' : a.progress != null ? `<div class="prog"><i style="width:${a.progress * 100}%"></i></div><div class="d">${Math.round(a.progress * 100)}%</div>` : ''}
-      </div></div>`).join('')}</div>`;
-}
-
-function health() {
+// ---------- data check page
+function renderCheck() {
   const all = state.all, n = all.length;
   const fields = [
     ['Departure & arrival times', f => f.depTime && f.arrTime && !(f.depTime === '00:00' && f.arrTime === '00:00')],
@@ -2166,37 +2271,33 @@ function health() {
     ['Seat number', f => f.seat], ['Seat type', f => f.seatType], ['Flight reason', f => f.reason],
   ];
   const sevLabel = { error: ['!', 'Error'], warn: ['!', 'Warning'], info: ['i', 'Info'] };
-  const visible = state.issues.filter(i => (state.healthSev === 'all' ? !i.dismissed : state.healthSev === 'dismissed' ? i.dismissed : i.severity === state.healthSev && !i.dismissed));
+  const visible = state.issues.filter(i => state.healthSev === 'all' ? !i.dismissed : state.healthSev === 'dismissed' ? i.dismissed : i.severity === state.healthSev && !i.dismissed);
   const count = sev => state.issues.filter(i => i.severity === sev && !i.dismissed).length;
   const byId = new Map(all.map(f => [f.id, f]));
-  const fixBtn = i => {
-    if (!i.fix) return '';
-    if (i.fix.kind === 'airport') return `<button class="btn small primary" data-act="fix-airport" data-v="${i.fix.code}">Add airport</button>`;
-    return `<button class="btn small primary" data-act="fix" data-v="${esc(i.id)}">${esc(i.fix.label)}</button>`;
-  };
-  return `<div class="grid g-2" style="margin-bottom:16px">
-    <div class="card"><h3>Logbook completeness</h3><div class="sub">Share of all ${n} flights with each field filled in</div>
-      ${fields.map(([l, fn]) => { const c = all.filter(fn).length; return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${l}</span><span class="num ink2">${pct(c, n)}% <span class="muted">(${c})</span></span></div><div class="meter"><i style="width:${pct(c, n)}%"></i></div></div>`; }).join('')}
-    </div>
-    <div class="card"><h3>What gets checked</h3><div class="sub">Each check runs on every save</div>
-      <ul style="margin:0;padding-left:18px;color:var(--ink-2);line-height:1.7">
-        <li>Logged duration vs. local times converted through both airports' time zones</li>
-        <li>Implausible block speed for the great-circle distance</li>
-        <li>Overlapping flights and impossible hops between consecutive flights</li>
-        <li>Same flight number and direction twice with no return, which is often a mis-logged return leg</li>
-        <li>Exact duplicates, unknown airports, placeholder times</li>
-      </ul></div>
-  </div>
-  <div class="card"><div class="card-head"><h3>Findings</h3>
-    <div class="chips">${[['all', 'All open'], ['error', `Errors ${count('error')}`], ['warn', `Warnings ${count('warn')}`], ['info', `Info ${count('info')}`], ['dismissed', `Dismissed ${state.issues.filter(i => i.dismissed).length}`]]
-      .map(([k, l]) => `<button class="chip ${state.healthSev === k ? 'on' : ''}" data-act="health-sev" data-v="${k}">${l}</button>`).join('')}</div></div>
-    ${visible.map(i => `<div class="issue">
-      <div class="sev ${i.severity}"><i>${sevLabel[i.severity][0]}</i>${sevLabel[i.severity][1]}</div>
-      <div><div class="t">${esc(i.title)}</div><div class="d">${esc(i.detail)}</div>
-        <div class="tagrow" style="margin-top:6px">${[...new Set(i.ids)].map(id => byId.get(id)).filter(Boolean).map(flightRef).join('')}</div></div>
-      <div class="acts">${fixBtn(i)}<button class="btn small" data-act="${i.dismissed ? 'undismiss' : 'dismiss'}" data-v="${esc(i.id)}">${i.dismissed ? 'Restore' : 'Dismiss'}</button></div>
-    </div>`).join('') || '<div class="empty">✓ Nothing to review here.</div>'}
-  </div>`;
+  const ref = f => `<button class="tag mono" data-act="edit" data-id="${f.id}" data-tip="${esc(`${f.A.label} → ${f.B.label}<div class='t-sub'>${date(f.date)} · ${f.airline || ''}</div>`)}">${esc(fname(f))} ${f.from}→${f.to}</button>`;
+  const fixBtn = i => !i.fix ? '' : i.fix.kind === 'airport'
+    ? `<button class="btn small primary" data-act="fix-airport" data-v="${i.fix.code}">Add airport</button>`
+    : `<button class="btn small primary" data-act="fix" data-v="${esc(i.id)}">${esc(i.fix.label)}</button>`;
+  $('#page-check').innerHTML = `
+    <div class="card" style="padding:16px 18px;margin-bottom:16px">
+      <div class="section-h" style="margin-top:0">Logbook completeness</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 24px">
+      ${fields.map(([l, fn]) => { const c = all.filter(fn).length; return `<div><div style="display:flex;justify-content:space-between;font-size:13px"><span>${l}</span><b>${pct(c, n)}%</b></div>
+        <div style="height:6px;background:var(--line);border-radius:3px;margin-top:4px;overflow:hidden"><i style="display:block;height:100%;width:${pct(c, n)}%;background:var(--teal-1)"></i></div></div>`; }).join('')}
+      </div></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)">
+        <div><b>Things to review</b> <span class="muted">· times vs. time zones, impossible speeds, overlaps, mis-logged return legs, duplicates</span></div>
+        <div class="chips">${[['all', 'All open'], ['error', `Errors ${count('error')}`], ['warn', `Warnings ${count('warn')}`], ['info', `Info ${count('info')}`], ['dismissed', `Dismissed ${state.issues.filter(i => i.dismissed).length}`]]
+          .map(([k, l]) => `<button class="chip ${state.healthSev === k ? 'on' : ''}" data-act="health-sev" data-v="${k}">${l}</button>`).join('')}</div>
+      </div>
+      ${visible.map(i => `<div class="issue">
+        <div class="sev ${i.severity}"><i>${sevLabel[i.severity][0]}</i>${sevLabel[i.severity][1]}</div>
+        <div><div class="t">${esc(i.title)}</div><div class="d">${esc(i.detail)}</div>
+          <div class="tagrow">${[...new Set(i.ids)].map(id => byId.get(id)).filter(Boolean).map(ref).join('')}</div></div>
+        <div class="acts">${fixBtn(i)}<button class="btn small" data-act="${i.dismissed ? 'undismiss' : 'dismiss'}" data-v="${esc(i.id)}">${i.dismissed ? 'Restore' : 'Dismiss'}</button></div>
+      </div>`).join('') || '<div class="empty">✓ Nothing to review here.</div>'}
+    </div>`;
 }
 
 // ---------- global click handling
@@ -2204,35 +2305,26 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el || el.closest('dialog')) return;
   const v = el.dataset.v, act = el.dataset.act;
-  const toggle = (k, val) => setFilter({ [k]: state.filter[k] === val ? null : val });
   switch (act) {
-    case 'year': setFilter({ year: v ? +v : null }); break;
-    case 'unfilter': if (v === 'q') $('#search').value = ''; setFilter({ [v]: v === 'q' ? '' : null }); break;
-    case 'clear-filters': $('#search').value = ''; setFilter({ year: null, airport: null, airline: null, route: null, aircraft: null, q: '' }); break;
-    case 'route': toggle('route', v); break;
-    case 'airport': toggle('airport', v); break;
-    case 'airline': toggle('airline', v); break;
-    case 'aircraft': toggle('aircraft', v); break;
+    case 'unfilter': setFilter({ [v]: null }); break;
+    case 'card-filter': { const card = CARDS.find(c => c.id === el.dataset.card); state.filter[card.filter] = v; go('flights'); break; }
+    case 'card-metric': state.cardMetric[el.dataset.card] = v; refresh(); break;
+    case 'compare': openCompare(v || el.dataset.card); break;
+    case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;
-    case 'add': openFlight(null); break;
-    case 'import': openImport(); break;
-    case 'sort': state.sort = { key: v, dir: state.sort.key === v ? -state.sort.dir : (v === 'sortTime' || v === 'dist' || v === 'dur' ? -1 : 1) }; renderView(); break;
-    case 'showall': state.showAll[v] = !state.showAll[v]; renderView(); break;
-    case 'trips-all': state.tripsAll = !state.tripsAll; renderView(); break;
-    case 'health-sev': state.healthSev = v; renderView(); break;
+    case 'sort': state.sort = { key: v, dir: state.sort.key === v ? -state.sort.dir : (v === 'sortTime' || v === 'dist' || v === 'dur' ? -1 : 1) }; renderFlights(); break;
+    case 'health-sev': state.healthSev = v; renderCheck(); break;
     case 'dismiss': commit(db => db.dismissed.push(v), 'Finding dismissed'); break;
     case 'undismiss': commit(db => { db.dismissed = db.dismissed.filter(x => x !== v); }); break;
     case 'fix': applyFix(state.issues.find(i => i.id === v)); break;
     case 'fix-airport': openAirport(v); break;
-    case 'add-airport': openAirport(null); break;
-    case 'edit-airport': openAirport(v); break;
   }
 });
-$('#view').addEventListener('mouseover', e => {
-  const r = e.target.closest('[data-route]');
+document.addEventListener('mouseover', e => {
+  if (state.page !== 'profile') return;
+  const r = e.target.closest?.('[data-route]');
   map.highlightRoutes(r ? r.dataset.route.split(' ') : null);
 });
-$('#view').addEventListener('mouseleave', () => map.highlightRoutes(null));
 
 function applyFix(issue) {
   if (!issue?.fix) return;
@@ -2242,40 +2334,36 @@ function applyFix(issue) {
   else if (kind === 'edit') openFlight(id, patch);
 }
 
-// ---------- top bar actions
-let searchTimer;
-$('#search').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => setFilter({ q: e.target.value }), 120); });
+// ---------- menu
 $('#btn-add').onclick = () => openFlight(null);
-$('#btn-import').onclick = () => openImport();
-$('#btn-units').onclick = () => { state.units = state.units === 'km' ? 'mi' : 'km'; store.set('units', state.units); $('#btn-units').textContent = state.units; refresh(); };
-function applyTheme() {
-  if (state.theme === 'auto') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.dataset.theme = state.theme;
-  $('#btn-theme').textContent = { auto: 'Auto', light: 'Light', dark: 'Dark' }[state.theme];
-  map.rerender();
-}
-$('#btn-theme').onclick = () => { state.theme = { auto: 'light', light: 'dark', dark: 'auto' }[state.theme]; store.set('theme', state.theme); applyTheme(); };
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => map.rerender());
-
-$('#btn-export').onclick = e => {
+$('#btn-menu').onclick = e => {
   e.stopPropagation();
   document.querySelector('.menu')?.remove();
-  const r = e.target.getBoundingClientRect();
+  const r = e.currentTarget.getBoundingClientRect();
   const m = document.createElement('div');
   m.className = 'menu';
-  m.style.top = (r.bottom + 6 + scrollY) + 'px'; m.style.left = Math.min(r.left, innerWidth - 240) + 'px';
-  m.innerHTML = `<button data-x="csv">CSV<small>myFlightradar24 format, re-importable</small></button>
-    <button data-x="csv-f">CSV of current view<small>${current.list.length} flights with current filters</small></button>
-    <button data-x="json">JSON backup<small>Everything, including custom airports</small></button>`;
+  m.style.top = (r.bottom + 6 + scrollY) + 'px'; m.style.left = Math.max(8, r.right - 260) + 'px';
+  m.innerHTML = `<button data-x="import">Import flights<small>myFlightradar24 CSV or Skylog backup</small></button>
+    <button data-x="csv">Export CSV<small>myFlightradar24 format, re-importable</small></button>
+    <button data-x="json">Export backup (JSON)<small>Everything, unencrypted. Keep it somewhere safe.</small></button>
+    <hr><button data-x="units">Units: ${state.units === 'km' ? 'kilometres' : 'miles'}<small>Switch to ${state.units === 'km' ? 'miles' : 'kilometres'}</small></button>
+    <button data-x="airport">Add custom airport<small>For airports missing from the built-in list</small></button>
+    ${hosted ? `<hr><button data-x="settings">Security &amp; sync<small>Password, GitHub token</small></button><button data-x="lock">Lock<small>Sign out on this device</small></button>` : ''}`;
   document.body.append(m);
   m.onclick = ev => {
     const x = ev.target.closest('button')?.dataset.x; if (!x) return;
-    const stamp = new Date().toISOString().slice(0, 10);
-    const apInfo = code => { const a = state.ap(code); return { label: `${a.city} / ${a.name || a.city}`, icao: a.icao }; };
-    const pick = x === 'csv-f' ? current.list.map(f => f.f) : state.db.flights;
-    if (x === 'json') download(`skylog-${stamp}.json`, JSON.stringify(state.db, null, 1), 'application/json');
-    else download(`skylog-${stamp}.csv`, toFR24CSV([...pick].sort((a, b) => a.date.localeCompare(b.date)), apInfo), 'text/csv');
     m.remove();
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (x === 'import') openImport();
+    if (x === 'csv') {
+      const apInfo = code => { const a = state.ap(code); return { label: `${a.city} / ${a.name || a.city}`, icao: a.icao }; };
+      download(`skylog-${stamp}.csv`, toFR24CSV([...state.db.flights].sort((a, b) => a.date.localeCompare(b.date)), apInfo), 'text/csv');
+    }
+    if (x === 'json') download(`skylog-${stamp}.json`, JSON.stringify(state.db, null, 1), 'application/json');
+    if (x === 'units') { state.units = state.units === 'km' ? 'mi' : 'km'; store.set('units', state.units); refresh(); }
+    if (x === 'airport') openAirport(null);
+    if (x === 'settings') openSettings();
+    if (x === 'lock') { if (unsynced() && !confirm('Some changes are not saved to GitHub yet. Lock anyway? (They stay on this device and upload next time.)')) return; sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); location.reload(); }
   };
   setTimeout(() => document.addEventListener('click', () => m.remove(), { once: true }));
 };
@@ -2287,11 +2375,44 @@ function download(name, text, type) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.target.closest?.('input,textarea,select,dialog')) { if (e.key === 'Escape' && e.target.id === 'search') { e.target.value = ''; setFilter({ q: '' }); e.target.blur(); } return; }
-  if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
+  if (!gate.classList.contains('hidden')) return;
+  if (e.target.closest?.('input,textarea,select,dialog')) {
+    if (e.key === 'Escape' && e.target.id === 'search') { e.target.value = ''; state.filter.q = ''; renderFlights(); e.target.blur(); }
+    return;
+  }
+  if (e.key === '/') { e.preventDefault(); if (state.page !== 'flights') go('flights'); $('#search')?.focus(); }
   else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openFlight(null); }
   else if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape' && map.replaying) stopReplay();
+});
+
+// ---------- settings (hosted)
+const dlgS = $('#dlg-settings'), sform = $('#settings-form');
+function openSettings() {
+  sform.reset(); $('#set-err').textContent = '';
+  $('#set-where').innerHTML = `Encrypted log: <a href="https://github.com/${where.owner}/${where.repo}/commits/HEAD/${VAULT_FILE}" target="_blank" rel="noopener">${where.owner}/${where.repo}/${VAULT_FILE}</a>. Every save is a commit, so earlier versions can always be recovered. GitHub token: ${sync.token ? 'set' : '<b>missing</b> (saving is off)'}.`;
+  dlgS.showModal();
+}
+sform.addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'save') return;
+  e.preventDefault();
+  const err = $('#set-err'), pw = $('#set-pass').value, token = $('#set-token').value.trim();
+  err.textContent = '';
+  try {
+    if (pw) {
+      if (pw !== $('#set-pass2').value) throw new Error("Passwords don't match.");
+      if (strengthOf(pw) < 0.45) throw new Error('Choose a stronger password.');
+    }
+    if (token) { const c = await gh.checkToken(token); if (!c.ok) throw new Error(c.reason); sync.token = token; }
+    if (pw) {
+      sync.session = await newSession(pw);
+      const key = await exportSession(sync.session);
+      sessionStorage.setItem(KEY, key);
+      if (localStorage.getItem(KEY)) localStorage.setItem(KEY, key);
+    }
+    if (pw || token) { save(); toast(pw ? 'Password changed. Other devices will ask for the new one.' : 'GitHub token updated'); }
+    dlgS.close();
+  } catch (ex) { err.textContent = ex.message; }
 });
 
 // ---------- flight dialog
@@ -2311,7 +2432,7 @@ function fillDatalists() {
 const apCode = v => {
   v = (v || '').trim();
   const m = v.toUpperCase().match(/^([A-Z0-9]{3,4})\b/);
-  if (m && (state.ap(m[1]) && !state.ap(m[1]).unknown)) return m[1];
+  if (m && state.ap(m[1]) && !state.ap(m[1]).unknown) return m[1];
   const hit = state.ap.all().find(a => a.city.toLowerCase() === v.toLowerCase() || a.label.toLowerCase() === v.toLowerCase());
   return hit ? hit.iata : m ? m[1] : v.toUpperCase();
 };
@@ -2346,13 +2467,13 @@ function openFlight(id, patch = null) {
 function updatePreview() {
   const from = apCode(form.from.value), to = apCode(form.to.value);
   const A = from && state.ap(from), B = to && state.ap(to);
-  $('#h-from').textContent = A ? (A.unknown ? 'Unknown airport. Add it under Places.' : `${A.label}, ${A.countryName}`) : '';
-  $('#h-to').textContent = B ? (B.unknown ? 'Unknown airport. Add it under Places.' : `${B.label}, ${B.countryName}`) : '';
+  $('#h-from').textContent = A ? (A.unknown ? 'Unknown airport: add it from the menu' : `${A.label}, ${A.countryName}`) : '';
+  $('#h-to').textContent = B ? (B.unknown ? 'Unknown airport: add it from the menu' : `${B.label}, ${B.countryName}`) : '';
   const bits = [];
   let tzDur = null;
   if (A && B && !A.unknown && !B.unknown) {
     const km = haversine(A, B);
-    bits.push(`Distance <b>${dist(km)}</b>`, `Typical block time <b>${dur(estimateDuration(km))}</b>`);
+    bits.push(`Distance <b>${dist(km)}</b>`, `Typical flight time <b>${dur(estimateDuration(km))}</b>`);
     if (form.date.value && form.depTime.value && form.arrTime.value) {
       tzDur = flightTimes({ date: form.date.value, depTime: form.depTime.value, arrTime: form.arrTime.value }, A, B).tzDur ?? null;
       if (tzDur != null) bits.push(`From times &amp; time zones <b>${dur(tzDur)}</b>`);
@@ -2410,26 +2531,30 @@ $('#f-delete').onclick = () => {
   commit(db => { db.flights = db.flights.filter(x => x.id !== f.id); }, `Deleted ${f.flightNumber || 'flight'} ${f.from}→${f.to}`);
 };
 
-// ---------- import dialog
+// ---------- import
+function parseImport(text, name) {
+  if (/\.json$/i.test(name) || text.trim().startsWith('{')) {
+    const j = JSON.parse(text);
+    if (!Array.isArray(j.flights)) throw new Error('JSON has no "flights" array');
+    const flights = j.flights.map(f => ({ ...f, id: f.id || newId() }));
+    return { flights, labels: j.airportLabels || {}, extra: { customAirports: j.customAirports || {}, dismissed: j.dismissed || [] },
+      asDb: { flights, airportLabels: j.airportLabels || {}, customAirports: j.customAirports || {}, dismissed: j.dismissed || [] } };
+  }
+  const { flights, airportsSeen } = fromFR24CSV(text);
+  return { flights, labels: airportsSeen, extra: {}, asDb: { flights, airportLabels: airportsSeen } };
+}
 const dlgI = $('#dlg-import');
 let pending = null;
 function openImport() { pending = null; $('#import-summary').classList.add('hidden'); $('#import-go').disabled = true; $('#import-file').value = ''; dlgI.showModal(); }
 async function readImport(file) {
-  const text = await file.text();
   const sum = $('#import-summary'); sum.classList.remove('hidden');
   try {
-    let flights, labels = {}, extra = {};
-    if (/\.json$/i.test(file.name) || text.trim().startsWith('{')) {
-      const j = JSON.parse(text);
-      if (!Array.isArray(j.flights)) throw new Error('JSON has no "flights" array');
-      flights = j.flights.map(f => ({ ...f, id: f.id || newId() })); labels = j.airportLabels || {};
-      extra = { customAirports: j.customAirports || {}, dismissed: j.dismissed || [] };
-    } else ({ flights, airportsSeen: labels } = fromFR24CSV(text));
+    const p = parseImport(await file.text(), file.name);
     const have = new Set(state.db.flights.map(flightKey));
-    const fresh = flights.filter(f => !have.has(flightKey(f)));
-    const unknown = [...new Set(flights.flatMap(f => [f.from, f.to]))].filter(c => state.ap(c).unknown && !extra.customAirports?.[c]);
-    pending = { flights, fresh, labels, extra };
-    sum.innerHTML = `<b>${file.name}</b>: ${plural(flights.length, 'flight')} found. <b>${fresh.length}</b> new, ${flights.length - fresh.length} already in your log.
+    p.fresh = p.flights.filter(f => !have.has(flightKey(f)));
+    const unknown = [...new Set(p.flights.flatMap(f => [f.from, f.to]))].filter(c => state.ap(c).unknown && !p.extra.customAirports?.[c]);
+    pending = p;
+    sum.innerHTML = `<b>${esc(file.name)}</b>: ${plural(p.flights.length, 'flight')} found. <b>${p.fresh.length}</b> new, ${p.flights.length - p.fresh.length} already in your log.
       ${unknown.length ? `<br>⚠ Airports without coordinates: ${unknown.join(', ')}. You can add them after importing.` : ''}`;
     $('#import-go').disabled = false;
   } catch (e) { sum.innerHTML = `<span style="color:var(--critical)">Couldn't read this file: ${esc(e.message)}</span>`; }
@@ -2452,19 +2577,18 @@ $('#import-form').addEventListener('submit', e => {
   }, mode === 'replace' ? `Replaced log with ${p.flights.length} flights` : `Imported ${p.fresh.length} new flights`);
 });
 
-// ---------- airport dialog
+// ---------- custom airport dialog
 const dlgA = $('#dlg-airport'), aform = $('#airport-form');
 aform.country.innerHTML = '<option value="">—</option>' + Object.entries(COUNTRIES).sort((a, b) => a[1][0].localeCompare(b[1][0])).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('');
 try { $('#dl-tz').innerHTML = Intl.supportedValuesOf('timeZone').map(z => `<option value="${z}">`).join(''); } catch { /* older browser */ }
 function openAirport(code) {
   const a = code ? state.ap(code) : null;
-  const custom = code && state.db.customAirports?.[code];
   aform.reset();
   if (a) {
     aform.iata.value = a.iata; aform.icao.value = a.icao || ''; aform.city.value = a.city || ''; aform.name.value = a.name || '';
     aform.country.value = a.country || ''; aform.lat.value = a.unknown ? '' : a.lat; aform.lon.value = a.unknown ? '' : a.lon; aform.tz.value = a.tz || '';
   }
-  $('#a-delete').classList.toggle('hidden', !custom);
+  $('#a-delete').classList.toggle('hidden', !(code && state.db.customAirports?.[code]));
   dlgA.showModal();
 }
 aform.addEventListener('submit', e => {
@@ -2483,35 +2607,19 @@ $('#a-delete').onclick = () => {
 };
 
 // ---------- boot
-async function boot() {
-  $('#btn-units').textContent = state.units;
-  const tb = $('#topbar');
-  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px')).observe(tb);
-  applyTheme();
-  let db = null;
-  try { db = JSON.parse(localStorage.getItem(DB_KEY)); } catch { /* storage blocked */ }
-  const firstRun = !db;
-  state.db = db || structuredClone(globalThis.SKYLOG_SEED || { flights: [], customAirports: {}, airportLabels: {} });
-  if (firstRun) save(); else setSave('Saved');
-  renderBackup();
+function start() {
   recompute();
   map.setMode(state.mapMode);
-  // Reattach the backup file (if one was set up) without holding up the first render.
-  if (!fsSupported) return;
-  try {
-    const handle = await Promise.race([kvGet('backup'), new Promise(r => setTimeout(r, 3000))]);
-    if (!handle) return;
-    backup.handle = handle;
-    backup.state = await handle.queryPermission({ mode: 'readwrite' }) === 'granted' ? 'on' : 'reconnect';
-    // Browser data was cleared but the backup file survived: restore from it.
-    if (firstRun && backup.state === 'on') {
-      const file = await readBackup().catch(() => null);
-      if (file) { state.db = file; save(); recompute(); toast(`Restored your logbook from ${handle.name}`); }
-    }
-    renderBackup();
-  } catch { /* IndexedDB unavailable */ }
+  go(state.page);
 }
-boot();
+if (hosted) bootHosted();
+else {
+  let db = null;
+  try { db = JSON.parse(localStorage.getItem('skylog.db')); } catch { /* storage blocked */ }
+  state.db = db || structuredClone(globalThis.SKYLOG_SEED || { flights: [], customAirports: {}, airportLabels: {} });
+  if (!db) save(); else setSync('Saved in this browser', 'ok');
+  start();
+}
 
 </script>
 </body>

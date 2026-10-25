@@ -1,10 +1,8 @@
-import { createMap } from './map.js';
+import { createMap, FREQ, freqColor } from './map.js';
 import { fromFR24CSV, toFR24CSV, SEAT_TYPES, CLASSES, REASONS, flightKey, newId, parseAirline, parseAircraft } from './fr24.js';
-import {
-  enrich, summarize, firsts, journeys, achievements, healthCheck, byCount, haversine, flightTimes,
-  estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI, HAULS, HAUL_RANGES,
-} from './stats.js';
+import { enrich, summarize, healthCheck, byCount, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI } from './stats.js';
 import { COUNTRIES } from './airports.js';
+import { VAULT_FILE, newSession, seal, openVault, exportSession, importSession, detectRepo, githubStore } from './vault.js';
 
 // ---------- small helpers
 const $ = (s, r = document) => r.querySelector(s);
@@ -12,24 +10,22 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const store = {
   get(k, d) { try { const v = localStorage.getItem('skylog.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('skylog.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  del(k) { try { localStorage.removeItem('skylog.' + k); } catch { /* storage unavailable */ } },
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const SERIES = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6', '--s7', '--s8'].map(v => `var(${v})`);
+const GRAYS = ['#2f2f2f', '#5c5c5c', '#8a8a8a', '#b4b4b4', '#d9d9d9', '#ececec'];
 
 const state = {
   db: null, all: [], ap: null, issues: [], issueBy: new Map(),
   filter: { year: null, airport: null, airline: null, route: null, aircraft: null, q: '' },
-  tab: store.get('tab', 'overview'), units: store.get('units', 'km'), theme: store.get('theme', 'auto'),
-  mapMode: store.get('mapMode', 'flat'), colorBy: store.get('colorBy', 'frequency'),
-  sort: { key: 'sortTime', dir: -1 }, undo: [], showAll: {}, healthSev: 'all', tripsAll: false,
+  page: store.get('page', 'profile'), units: store.get('units', 'km'), mapMode: store.get('mapMode', 'flat'),
+  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all',
 };
 
 const n0 = n => Math.round(n).toLocaleString();
 const dist = km => km == null ? '—' : state.units === 'mi' ? `${n0(km / KM_PER_MI)} mi` : `${n0(km)} km`;
-const distNum = km => state.units === 'mi' ? km / KM_PER_MI : km;
 const dur = m => m == null ? '—' : `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
-const durLong = m => { const d = Math.floor(m / 1440), h = Math.round((m % 1440) / 60); return d ? `${d}d ${h}h` : `${h}h`; };
 const date = iso => new Date(iso + 'T00:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 const plural = (n, w) => `${n.toLocaleString()} ${w}${n === 1 ? '' : 's'}`;
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
@@ -64,83 +60,66 @@ function toast(msg, undoable = false) {
 }
 $('#toast-undo').onclick = () => { undo(); $('#toast').classList.remove('on'); };
 
-// ---------- persistence
-// The logbook lives in this browser's storage. It can also be mirrored to a JSON file you pick
-// once, which survives clearing browser data and restores on any machine.
-const DB_KEY = 'skylog.db';
-let saveTimer;
-const backup = { handle: null, state: 'off' }; // off | on | reconnect
-const fsSupported = 'showSaveFilePicker' in window;
-function setSave(text, err = false) { const el = $('#save-state'); el.textContent = text; el.classList.toggle('err', err); }
+// ---------- storage
+// Hosted on GitHub Pages: the log is an encrypted file in the repository (see vault.js).
+// Opened any other way (e.g. a downloaded file): it lives in this browser's storage.
+const where = detectRepo();
+const hosted = !!where;
+const gh = hosted ? githubStore(where) : null;
+const sync = { session: null, sha: null, token: null, timer: null, busy: false, rev: 0, saved: 0 };
+const KEY = 'skylog.key';
+
+function setSync(text, kind = '') { const el = $('#sync'); el.textContent = text; el.className = 'sync ' + kind; }
+const unsynced = () => hosted && sync.rev !== sync.saved;
+
 function save() {
   state.db.savedAt = new Date().toISOString();
-  try { localStorage.setItem(DB_KEY, JSON.stringify(state.db)); setSave('Saved'); }
-  catch { setSave('Not saved: browser storage unavailable. Use Export.', true); }
-  clearTimeout(saveTimer);
-  if (backup.state === 'on') saveTimer = setTimeout(writeBackup, 400);
+  if (!hosted) {
+    try { localStorage.setItem('skylog.db', JSON.stringify(state.db)); setSync('Saved in this browser', 'ok'); }
+    catch { setSync('Not saved: browser storage unavailable. Use Export.', 'err'); }
+    return;
+  }
+  sync.rev++;
+  setSync('Saving…');
+  clearTimeout(sync.timer);
+  sync.timer = setTimeout(push, 1000);
 }
-// Another Skylog window saved: pick up its changes.
-addEventListener('storage', e => {
-  if (e.key !== DB_KEY || !e.newValue) return;
-  try { state.db = JSON.parse(e.newValue); recompute(); } catch { /* ignore partial writes */ }
-});
 
-function idb(mode, fn) {
-  return new Promise((resolve, reject) => {
-    const open = indexedDB.open('skylog', 1);
-    open.onupgradeneeded = () => open.result.createObjectStore('kv');
-    open.onerror = () => reject(open.error);
-    open.onsuccess = () => {
-      const tx = open.result.transaction('kv', mode), req = fn(tx.objectStore('kv'));
-      tx.oncomplete = () => resolve(req.result);
-      tx.onerror = () => reject(tx.error);
-    };
-  });
+async function push() {
+  if (sync.busy) { sync.timer = setTimeout(push, 700); return; }
+  sync.busy = true;
+  const rev = sync.rev;
+  try {
+    const sealed = await seal(sync.session, { db: state.db, token: sync.token });
+    // Keep an encrypted copy on this device until GitHub confirms the save, so nothing is lost
+    // if the tab closes or the connection drops.
+    store.set('pending', { vault: sealed, baseSha: sync.sha });
+    if (!sync.token) { setSync('Not synced: add a GitHub token (menu → Security & sync)', 'err'); return; }
+    sync.sha = await gh.write(sync.token, sealed, sync.sha);
+    store.set('cache', { vault: sealed, sha: sync.sha });
+    if (sync.rev === rev) { sync.saved = rev; store.del('pending'); setSync('Saved to GitHub', 'ok'); }
+  } catch (e) {
+    if (e.conflict) await resolveConflict();
+    else if (e.auth) setSync('GitHub rejected the token. Update it in Security & sync.', 'err');
+    else { setSync('Offline: changes kept on this device, retrying…', 'err'); clearTimeout(sync.timer); sync.timer = setTimeout(push, 15000); }
+  } finally { sync.busy = false; }
 }
-const kvGet = k => idb('readonly', s => s.get(k));
-const kvSet = (k, v) => idb('readwrite', s => s.put(v, k));
+addEventListener('online', () => { if (unsynced()) push(); });
+addEventListener('beforeunload', e => { if (unsynced()) e.preventDefault(); });
 
-async function writeBackup() {
-  try {
-    const w = await backup.handle.createWritable();
-    await w.write(JSON.stringify(state.db, null, 1)); await w.close();
-  } catch { backup.state = 'reconnect'; }
-  renderBackup();
+// Someone saved from another device since this one loaded.
+async function resolveConflict() {
+  let remote, theirs = null;
+  try { remote = await gh.read(sync.token); theirs = (await openVault(remote.vault, sync.session)).payload; } catch { /* unreadable */ }
+  if (!theirs) { setSync('The log was re-encrypted elsewhere (new password?). Reload to unlock again.', 'err'); return; }
+  sync.sha = remote.sha;
+  const keepMine = confirm(`Your flight log was also changed on another device (${theirs.db.flights.length} flights there, ${state.db.flights.length} here).\n\n` +
+    'OK: keep the version on this device (replaces the other one)\nCancel: switch to the other version (discards changes made here)');
+  if (keepMine) { sync.timer = setTimeout(push, 0); return; }
+  state.db = theirs.db; sync.saved = sync.rev; store.del('pending');
+  recompute(); setSync('Loaded the latest version', 'ok');
 }
-async function readBackup() {
-  const data = JSON.parse(await (await backup.handle.getFile()).text());
-  return Array.isArray(data?.flights) ? data : null;
-}
-async function linkBackup() {
-  try {
-    const handle = await showSaveFilePicker({ suggestedName: 'skylog-data.json', types: [{ description: 'Skylog data', accept: { 'application/json': ['.json'] } }] });
-    Object.assign(backup, { handle, state: 'on' });
-    await kvSet('backup', handle); await writeBackup();
-    toast(`Every change now also saves to ${handle.name}`);
-  } catch (e) { if (e.name !== 'AbortError') toast('Could not set up the backup file'); }
-}
-async function reconnectBackup() {
-  try { if (await backup.handle.requestPermission({ mode: 'readwrite' }) !== 'granted') return; }
-  catch { backup.state = 'off'; return renderBackup(); }
-  backup.state = 'on';
-  // Keep whichever copy is newer.
-  const file = await readBackup().catch(() => null);
-  if (file && (file.savedAt || '') > (state.db.savedAt || '')) {
-    state.db = file; localStorage.setItem(DB_KEY, JSON.stringify(file)); recompute();
-    toast(`Loaded newer data from ${backup.handle.name}`);
-  } else await writeBackup();
-  renderBackup();
-}
-function renderBackup() {
-  const b = $('#btn-backup');
-  b.classList.toggle('hidden', !fsSupported);
-  b.textContent = { off: 'Set up backup file', on: `Backup ✓ ${backup.handle?.name}`, reconnect: 'Reconnect backup file' }[backup.state];
-  b.title = backup.state === 'on' ? 'Every change is also written to this file. Click to choose a different file.'
-    : backup.state === 'reconnect' ? 'Click to allow Skylog to keep writing to your backup file'
-    : 'Mirror your logbook to a JSON file on disk, so it survives clearing browser data';
-  b.classList.toggle('warn', backup.state === 'reconnect');
-}
-$('#btn-backup').onclick = () => backup.state === 'reconnect' ? reconnectBackup() : linkBackup();
+
 function commit(mutate, msg) {
   state.undo.push(JSON.stringify(state.db));
   if (state.undo.length > 30) state.undo.shift();
@@ -153,6 +132,102 @@ function undo() {
   if (!prev) return toast('Nothing to undo');
   state.db = JSON.parse(prev); save(); recompute(); toast('Undone');
 }
+
+// ---------- lock & setup screens (hosted mode)
+const gate = $('#gate');
+function showGate(msg, form = null) {
+  gate.classList.remove('hidden');
+  $('#gate-msg').textContent = msg;
+  $('#unlock-form').classList.toggle('hidden', form !== 'unlock');
+  $('#setup-form').classList.toggle('hidden', form !== 'setup');
+  (form === 'unlock' ? $('#u-pass') : form === 'setup' ? $('#s-pass') : null)?.focus();
+}
+
+async function bootHosted() {
+  showGate('Loading…');
+  let remote = null, offline = false;
+  try { remote = await gh.read(); } catch { offline = true; }
+  if (!remote && !offline) {
+    $('#s-token-link').href = 'https://github.com/settings/personal-access-tokens/new';
+    return showGate(`Set up your private flight log. It will be stored encrypted in ${where.owner}/${where.repo}.`, 'setup');
+  }
+  const src = remote || store.get('cache', null);
+  if (!src) return showGate("Can't reach GitHub right now, and this device has no saved copy yet. Check your connection and reload.");
+  sync.sha = src.sha;
+  gate.dataset.vault = JSON.stringify(src.vault);
+  const saved = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
+  if (saved) {
+    try { return await enter(src.vault, await importSession(saved)); }
+    catch { sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); }
+  }
+  showGate(offline ? 'Offline: unlocking the copy saved on this device.' : 'This flight log is private.', 'unlock');
+}
+
+async function enter(v, passwordOrSession, remember) {
+  const { session, payload } = await openVault(v, passwordOrSession);
+  Object.assign(sync, { session, token: payload.token || null });
+  state.db = payload.db;
+  const key = await exportSession(session);
+  sessionStorage.setItem(KEY, key);
+  if (remember) localStorage.setItem(KEY, key);
+  // Changes made on this device that never reached GitHub?
+  const pend = store.get('pending', null);
+  if (pend) {
+    try {
+      const mine = (await openVault(pend.vault, session)).payload.db;
+      const keep = pend.baseSha === sync.sha || confirm('This device has changes that were never uploaded, but the log has since changed elsewhere.\n\nOK: keep this device\'s version\nCancel: discard them');
+      if (keep) { state.db = mine; sync.rev++; sync.timer = setTimeout(push, 300); }
+      else store.del('pending');
+    } catch { store.del('pending'); }
+  }
+  gate.classList.add('hidden');
+  delete gate.dataset.vault;
+  start();
+  if (!unsynced()) setSync(sync.token ? 'Saved to GitHub' : 'Read-only: no GitHub token', sync.token ? 'ok' : 'err');
+}
+
+$('#unlock-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('#u-go'); btn.disabled = true; btn.textContent = 'Unlocking…'; $('#u-err').textContent = '';
+  try { await enter(JSON.parse(gate.dataset.vault), $('#u-pass').value, $('#u-remember').checked); $('#u-pass').value = ''; }
+  catch (err) { $('#u-err').textContent = err.message === 'bad-password' ? 'Wrong password.' : 'Could not open the log: ' + err.message; }
+  finally { btn.disabled = false; btn.textContent = 'Unlock'; }
+});
+
+const strengthOf = pw => {
+  let s = Math.min(1, pw.length / 16) * 0.6 + [/[a-z]/, /[A-Z]/, /\d/, /[^\w]/].filter(r => r.test(pw)).length * 0.1;
+  if (/^(.)\1+$/.test(pw) || /password|123456|qwerty/i.test(pw)) s = 0.1;
+  return Math.min(1, s);
+};
+$('#s-pass').addEventListener('input', e => {
+  const s = strengthOf(e.target.value), m = $('#s-meter');
+  m.style.width = s * 100 + '%';
+  m.style.background = s < 0.45 ? 'var(--critical)' : s < 0.75 ? 'var(--warning)' : 'var(--good)';
+});
+$('#setup-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = $('#s-err'), btn = $('#s-go'), pw = $('#s-pass').value, token = $('#s-token').value.trim();
+  err.textContent = '';
+  if (pw !== $('#s-pass2').value) return void (err.textContent = "Passwords don't match.");
+  if (strengthOf(pw) < 0.45) return void (err.textContent = 'Choose a stronger password: longer, or a few random words.');
+  btn.disabled = true; btn.textContent = 'Checking token…';
+  try {
+    const check = await gh.checkToken(token);
+    if (!check.ok) throw new Error(check.reason);
+    let db = { version: 1, flights: [], customAirports: {}, airportLabels: {}, dismissed: [] };
+    const file = $('#s-csv').files[0];
+    if (file) db = { ...db, ...parseImport(await file.text(), file.name).asDb };
+    btn.textContent = 'Encrypting…';
+    const session = await newSession(pw);
+    db.savedAt = new Date().toISOString();
+    const sealed = await seal(session, { db, token });
+    sync.sha = await gh.write(token, sealed, null, 'Create encrypted flight log');
+    store.set('cache', { vault: sealed, sha: sync.sha });
+    await enter(sealed, session);
+    toast(file ? `Your log is set up with ${db.flights.length} flights` : 'Your log is set up. Add or import flights to begin.');
+  } catch (ex) { err.textContent = ex.message; }
+  finally { btn.disabled = false; btn.textContent = 'Create my flight log'; }
+});
 
 // ---------- derived data
 function recompute() {
@@ -169,94 +244,79 @@ function recompute() {
   refresh();
 }
 
-function filtered() {
-  const { year, airport, airline, route, aircraft, q } = state.filter;
+const byYear = () => state.all.filter(f => !state.filter.year || f.year === state.filter.year);
+function flightsFiltered() {
+  const { airport, airline, route, aircraft, q } = state.filter;
   const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return state.all.filter(f => (!year || f.year === year) && (!airport || f.from === airport || f.to === airport)
-    && (!airline || f.airline === airline) && (!route || f.routeKey === route)
-    && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t)));
+  return byYear().filter(f => (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
+    && (!route || f.routeKey === route) && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t)));
 }
 
 let current = { list: [], s: null };
 function refresh() {
-  const list = filtered(), s = summarize(list);
+  const list = byYear(), s = summarize(list);
   current = { list, s };
-  renderFilterBar(); renderHud(s); updateMap(s); renderTabs(); renderView();
+  renderNav(); renderYearSelect(); updateMap(s);
+  if (state.page === 'profile') renderProfile(list, s);
+  if (state.page === 'flights') renderFlights();
+  if (state.page === 'check') renderCheck();
 }
+const setFilter = patch => { Object.assign(state.filter, patch); refresh(); };
 
-function setFilter(patch) {
-  Object.assign(state.filter, patch);
+function go(page) {
+  state.page = page; store.set('page', page);
+  for (const p of ['profile', 'flights', 'check']) $('#page-' + p).classList.toggle('hidden', p !== page);
   refresh();
+  if (page === 'profile') map.rerender();
+  scrollTo(0, 0);
 }
+function renderNav() {
+  const open = state.issues.filter(i => !i.dismissed && i.severity !== 'info').length;
+  document.querySelectorAll('#nav button').forEach(b => {
+    if (b.dataset.page === 'check') b.innerHTML = `Data check${open ? `<span class="badge">${open}</span>` : ''}`;
+    if (b.dataset.page === 'flights') b.textContent = 'Flights';
+    b.setAttribute('aria-current', b.dataset.page === state.page ? 'page' : 'false');
+  });
+}
+$('#nav').onclick = e => { const b = e.target.closest('button[data-page]'); if (b) go(b.dataset.page); };
 
-// ---------- header, filters, HUD
-function renderFilterBar() {
+function renderYearSelect() {
   const years = [...new Set(state.all.map(f => f.year))].sort((a, b) => b - a);
-  const cnt = y => state.all.filter(f => f.year === y).length;
-  const f = state.filter;
-  const pills = [];
-  if (f.airport) pills.push(['airport', `Airport: ${f.airport}`]);
-  if (f.airline) pills.push(['airline', `Airline: ${f.airline}`]);
-  if (f.route) pills.push(['route', `Route: ${f.route.replace('–', ' ⇄ ')}`]);
-  if (f.aircraft) pills.push(['aircraft', `Aircraft: ${f.aircraft}`]);
-  if (f.q) pills.push(['q', `“${f.q}”`]);
-  $('#filterbar').innerHTML = `
-    <div class="chips">
-      <button class="chip ${!f.year ? 'on' : ''}" data-act="year" data-v="">All time<span class="c">${state.all.length}</span></button>
-      ${years.map(y => `<button class="chip ${f.year === y ? 'on' : ''}" data-act="year" data-v="${y}">${y}<span class="c">${cnt(y)}</span></button>`).join('')}
-    </div>
-    ${pills.map(([k, l]) => `<span class="pill">${esc(l)}<button data-act="unfilter" data-v="${k}" aria-label="Remove filter">✕</button></span>`).join('')}
-    ${pills.length > 1 ? `<button class="btn small ghost" data-act="clear-filters">Clear all</button>` : ''}`;
+  const html = `<option value="">All years</option>` + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  for (const sel of document.querySelectorAll('select[data-year], #year')) {
+    if (sel.dataset.html !== html) { sel.innerHTML = html; sel.dataset.html = html; }
+    sel.value = state.filter.year || '';
+  }
 }
-
-function renderHud(s) {
-  const scope = state.filter.year || (Object.values(state.filter).some(Boolean) ? 'Filtered' : 'All time');
-  $('#hud').innerHTML = [
-    [plural(s.count, 'flight').split(' ')[0], `Flights · ${scope}`],
-    [n0(distNum(s.km)), `${state.units} · ${(s.km / EARTH_KM).toFixed(1)}× Earth`],
-    [durLong(s.minutes), 'In the air'],
-    [s.airports.size, 'Airports'],
-    [s.countries.size, 'Countries'],
-  ].map(([v, k]) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`).join('');
-}
+document.addEventListener('change', e => { if (e.target.matches('#year, select[data-year]')) setFilter({ year: +e.target.value || null }); });
 
 // ---------- map
 const map = createMap($('#map'), {
   tooltip,
-  onRoute: r => setFilter({ route: state.filter.route === r.key ? null : r.key }),
-  onAirport: a => setFilter({ airport: state.filter.airport === a.code ? null : a.code }),
+  onRoute: r => { state.filter.route = r.key; go('flights'); },
+  onAirport: a => { state.filter.airport = a.code; go('flights'); },
 });
 function updateMap(s) {
-  const years = state.all.map(f => f.year);
-  const yearRange = years.length ? [Math.min(...years), Math.max(...years)] : [0, 0];
-  const routes = byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown);
   map.update({
-    routes, fmtDist: dist,
+    routes: byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown), fmtDist: dist,
     airports: byCount(s.airports).filter(a => !a.a.unknown),
     countries: [...s.countries.values()].map(c => c.id).filter(Boolean),
-    yearRange,
   });
-  const lg = $('#legend');
-  if (state.colorBy === 'recency') {
-    const [y0, y1] = yearRange;
-    lg.innerHTML = `Last flown<div class="ramp" style="background:linear-gradient(90deg,var(--route-old),var(--route-new))"></div><div class="ends"><span>${y0}</span><span>${y1}</span></div>`;
-  } else lg.innerHTML = `Line weight = times flown · <span class="muted">click map, then scroll to zoom</span>`;
+  $('#legend').innerHTML = `<b>Times flown</b>${FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('')}`;
   document.querySelectorAll('#seg-mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mapMode));
-  document.querySelectorAll('#seg-color button').forEach(b => b.setAttribute('aria-pressed', b.dataset.color === state.colorBy));
 }
 $('#seg-mode').onclick = e => { const m = e.target.dataset.mode; if (!m) return; state.mapMode = m; store.set('mapMode', m); map.setMode(m); updateMap(current.s); };
-$('#seg-color').onclick = e => { const c = e.target.dataset.color; if (!c) return; state.colorBy = c; store.set('colorBy', c); map.setColorBy(c); updateMap(current.s); };
 $('#btn-reset').onclick = () => map.reset();
 $('#btn-zin').onclick = () => map.zoomBy(1.5);
 $('#btn-zout').onclick = () => map.zoomBy(1 / 1.5);
 
-// Replay
 const speeds = [1, 2, 4, 0.5];
 let speedIx = 0;
 $('#btn-replay').onclick = () => {
   if (map.replaying) return stopReplay();
-  const list = current.list.filter(f => f.path).map(f => ({ ...f, a: f.A, b: f.B }));
-  if (!list.length) return toast('No mappable flights in this view');
+  const counts = new Map([...current.s.routes.values()].map(r => [r.key, r.count]));
+  const list = current.list.filter(f => f.path).map(f => ({ ...f, a: f.A, b: f.B, routeCount: counts.get(f.routeKey) }));
+  if (!list.length) return toast('No flights to replay');
   $('#replay').classList.remove('hidden'); $('#legend').classList.add('hidden');
   $('#btn-replay').textContent = '■ Stop';
   let km = 0, lastI = -1;
@@ -266,7 +326,7 @@ $('#btn-replay').onclick = () => {
       const f = list[Math.min(i, list.length - 1)];
       if (i !== lastI) { km = list.slice(0, i).reduce((a, x) => a + x.dist, 0); lastI = i; }
       $('#rp-date').textContent = date(f.date);
-      $('#rp-leg').innerHTML = `${esc(fname(f))} ${f.from} → ${f.to} · ${Math.min(i + 1, list.length)}/${list.length} · ${n0(distNum(km + f.dist * Math.min(t, 1)))} ${state.units}`;
+      $('#rp-leg').textContent = `${fname(f)} ${f.from} → ${f.to} · ${Math.min(i + 1, list.length)}/${list.length} · ${dist(km + f.dist * Math.min(t, 1))}`;
       $('#rp-bar').style.width = ((i + t) / list.length * 100) + '%';
     },
     onEnd: () => { $('#btn-replay').textContent = '▶ Replay'; setTimeout(stopReplay, 1800); },
@@ -281,189 +341,184 @@ $('#rp-stop').onclick = stopReplay;
 $('#rp-pause').onclick = e => { const p = e.target.textContent === 'Pause'; map.pauseReplay(p); e.target.textContent = p ? 'Resume' : 'Pause'; };
 $('#rp-speed').onclick = e => { speedIx = (speedIx + 1) % speeds.length; e.target.textContent = speeds[speedIx] + '×'; };
 
-// ---------- tabs
-function renderTabs() {
-  const open = state.issues.filter(i => !i.dismissed && i.severity !== 'info').length;
-  document.querySelectorAll('.tab').forEach(t => {
-    t.setAttribute('aria-selected', t.dataset.tab === state.tab);
-    if (t.dataset.tab === 'health') t.innerHTML = `Data health${open ? `<span class="badge warn">${open}</span>` : ''}`;
-    if (t.dataset.tab === 'flights') t.innerHTML = `Flights<span class="badge">${current.list.length}</span>`;
-  });
-}
-$('#tabs').onclick = e => {
-  const t = e.target.closest('.tab'); if (!t) return;
-  state.tab = t.dataset.tab; store.set('tab', state.tab); renderTabs(); renderView();
-};
+// ---------- profile page
+function renderProfile(list, s) {
+  const dom = list.filter(f => f.A.country && f.A.country === f.B.country).length;
+  const mins = s.minutes, days = mins / 1440;
+  const km = state.units === 'mi' ? s.km / KM_PER_MI : s.km, other = state.units === 'mi' ? s.km : s.km / KM_PER_MI;
+  $('#big-stats').innerHTML = `
+    <div class="big"><div class="v">${s.count.toLocaleString()}<small>flight${s.count === 1 ? '' : 's'}</small></div>
+      <div class="s"><b>${dom}</b> domestic<br><b>${s.count - dom}</b> international</div></div>
+    <div class="big"><div class="v">${n0(km)}<small>${state.units}</small></div>
+      <div class="s"><b>${n0(other)}</b> ${state.units === 'mi' ? 'km' : 'miles'}<br><b>${(s.km / EARTH_KM).toFixed(1)}×</b> around the Earth · <b>${(s.km / MOON_KM).toFixed(2)}×</b> to the Moon</div></div>
+    <div class="big"><div class="v">${Math.floor(mins / 60).toLocaleString()}<small>h</small> ${Math.round(mins % 60)}<small>min</small></div>
+      <div class="s"><b>${days.toFixed(1)}</b> days<br><b>${(days / 365.25).toFixed(3)}</b> years</div></div>
+    <div class="big"><div class="v">${(s.co2 / 1000).toFixed(1)}<small>tons CO₂</small></div>
+      <div class="s"><b>${s.count ? n0(s.co2 / s.count) : 0}</b> kg per flight<br>rough per-passenger estimate</div></div>`;
 
-function renderView() {
-  const { list, s } = current;
-  const v = $('#view');
-  if (!state.all.length) {
-    v.innerHTML = `<div class="empty"><h2>No flights yet</h2><p>Import a myFlightradar24 CSV export or add your first flight.</p>
-      <button class="btn primary" data-act="add">+ Add flight</button> <button class="btn" data-act="import">Import</button></div>`;
-    return;
+  const conts = {};
+  for (const a of s.airports.values()) if (a.a.continent) conts[a.a.continent] = (conts[a.a.continent] || 0) + a.count;
+  const code = (obj, order, labels) => order.map(k => ({ label: labels[k].toLowerCase(), value: obj[k] || 0 }));
+  $('#pies').innerHTML = [
+    ['Class', code(s.cls, [1, 4, 2, 3, 5], CLASSES)],
+    ['Seat', code(s.seatType, [1, 2, 3], SEAT_TYPES).concat(s.seatType[4] || s.seatType[5] ? code(s.seatType, [4, 5], SEAT_TYPES) : [])],
+    ['Reason', code(s.reason, [1, 2, 3, 4], REASONS)],
+    ['Continents', ['Europe', 'Asia', 'North America', 'Oceania', 'South America', 'Africa'].map(c => ({ label: c.replace('North ', 'N ').replace('South ', 'S '), value: conts[c] || 0 }))],
+  ].map(([t, items]) => `<div class="pie-block"><h4>${t}</h4><div class="pie-row">${pie(items)}
+      <div class="pie-legend">${items.map(i => `<div class="${i.value ? '' : 'z'}"><b>${i.value}</b> ${esc(i.label)}</div>`).join('')}</div></div></div>`).join('');
+
+  $('#stats').innerHTML = `<div class="cards">${CARDS.map(c => topCard(c, list)).join('')}</div>
+    <div class="card trend blue"><div class="head"><h3>Flights per year</h3></div><div class="plot" id="ch-year"></div>
+      <div class="foot"><div class="v">${yearsFlying()}</div><div class="k">years of flying</div></div></div>
+    <div class="trend-row">
+      <div class="card trend pink"><div class="head"><h3>Flights per month</h3></div><div class="plot" id="ch-month"></div></div>
+      <div class="card trend pink"><div class="head"><h3>Flights per weekday</h3></div><div class="plot" id="ch-dow"></div></div>
+    </div>`;
+  drawTrends(s);
+  growBars($('#stats'));
+}
+
+function pie(items) {
+  const total = items.reduce((t, i) => t + i.value, 0);
+  if (!total) return `<svg viewBox="-1 -1 2 2"><circle r="1" fill="#eee"/></svg>`;
+  let a0 = -Math.PI / 2;
+  const live = items.map((it, ix) => ({ ...it, color: GRAYS[ix] })).filter(i => i.value);
+  if (live.length === 1) return `<svg viewBox="-1 -1 2 2"><circle r="1" fill="${live[0].color}" data-tip="<b>${esc(live[0].label)}</b> · 100%"/></svg>`;
+  return `<svg viewBox="-1 -1 2 2">${live.map(i => {
+    const a1 = a0 + i.value / total * Math.PI * 2, large = a1 - a0 > Math.PI ? 1 : 0;
+    const d = `M0,0 L${Math.cos(a0)},${Math.sin(a0)} A1,1 0 ${large} 1 ${Math.cos(a1)},${Math.sin(a1)} Z`;
+    a0 = a1;
+    return `<path d="${d}" fill="${i.color}" stroke-width="0.02" data-tip="<b>${esc(i.label)}</b> · ${i.value} (${pct(i.value, total)}%)"/>`;
+  }).join('')}</svg>`;
+}
+
+// Top-list cards. Each aggregates flights by some key; "Flights" counts each flight once per key.
+const CARDS = [
+  { id: 'airports', title: 'Top airports', color: 'green', unit: 'airports', metrics: ['flights'], filter: 'airport',
+    keys: f => [f.from, f.to], label: k => k, sub: (k, f) => (f.from === k ? f.A : f.B).label },
+  { id: 'airlines', title: 'Top airlines', color: 'yellow', unit: 'airlines', metrics: ['flights', 'distance', 'time'], filter: 'airline',
+    keys: f => [f.airline].filter(Boolean), label: (k, f) => f.airlineIata || k.slice(0, 3).toUpperCase(), sub: k => k },
+  { id: 'aircraft', title: 'Top aircraft', color: 'red', unit: 'aircraft', metrics: ['flights', 'distance', 'time'], filter: 'aircraft',
+    keys: f => [f.aircraftCode || f.aircraft].filter(Boolean), label: k => k, sub: (k, f) => f.aircraft },
+  { id: 'routes', title: 'Top routes', color: 'purple', unit: 'routes', metrics: ['flights', 'distance', 'time'], filter: 'route',
+    keys: f => [f.routeKey], label: k => k.replace('–', '-'), sub: (k, f) => `${f.A.city} – ${f.B.city}` },
+  { id: 'countries', title: 'Top countries', color: 'teal', unit: 'countries', metrics: ['flights'],
+    keys: f => [...new Set([f.A.country, f.B.country])].filter(Boolean), label: k => k, sub: k => COUNTRIES[k]?.[0] || k },
+];
+const METRIC_LABEL = { flights: 'Flights', distance: 'Distance', time: 'Time' };
+function aggregate(card, list) {
+  const m = new Map();
+  for (const f of list) for (const k of new Set(card.keys(f))) {
+    if (!m.has(k)) m.set(k, { key: k, label: card.label(k, f), sub: card.sub(k, f), flights: 0, distance: 0, time: 0 });
+    const x = m.get(k); x.flights++; x.distance += f.dist || 0; x.time += f.dur || 0;
   }
-  const views = { overview, flights: flightsView, places, fleet, trips, achievements: achievementsView, health };
-  v.innerHTML = (views[state.tab] || overview)(list, s);
+  return [...m.values()];
 }
+const metricText = (metric, v) => metric === 'distance' ? dist(v) : metric === 'time' ? `${Math.round(v / 60).toLocaleString()} h` : v.toLocaleString();
+const metricShort = (metric, v) => metric === 'distance' ? (state.units === 'mi' ? v / KM_PER_MI : v) >= 10000 ? `${Math.round((state.units === 'mi' ? v / KM_PER_MI : v) / 1000)}k` : n0(state.units === 'mi' ? v / KM_PER_MI : v)
+  : metric === 'time' ? `${Math.round(v / 60)}h` : v;
 
-// ---------- chart building blocks (plain HTML)
-function colChart(items, { values = items.length <= 14, height = 160 } = {}) {
-  const max = Math.max(1, ...items.map(i => i.value));
-  const step = niceStep(max), top = Math.ceil(max / step) * step;
-  const lines = []; for (let v = step; v <= top; v += step) lines.push(v);
-  return `<div class="cols-chart" style="height:${height}px">
-    ${lines.map(v => `<div class="gridline" style="bottom:${v / top * (height - 18)}px"></div>`).join('')}
-    ${items.map(i => `<div class="col ${i.act ? 'click' : ''} ${i.sel ? 'sel' : ''} ${i.faded ? 'faded' : ''}" data-tip="${esc(i.tip)}" ${i.act || ''}>
-      ${values && i.value ? `<span class="val">${i.value}</span>` : ''}
-      <div class="bar" style="height:${i.value / top * (height - 18 - (values ? 16 : 0))}px"></div></div>`).join('')}
-  </div><div class="cols-axis">${items.map(i => `<span>${i.label}</span>`).join('')}</div>`;
-}
-function niceStep(max) {
-  const raw = max / 4, p = 10 ** Math.floor(Math.log10(raw)), n = raw / p;
-  return Math.max(1, (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p);
-}
-function hbars(items, { limit = 8, key } = {}) {
-  const max = Math.max(1, ...items.map(i => i.value));
-  const all = key && state.showAll[key];
-  const shown = all ? items : items.slice(0, limit);
-  return `<div class="hbars">${shown.map(i => `<div class="hbar" ${i.act || ''} data-tip="${esc(i.tip || '')}">
-      <div class="lbl">${i.label}</div><div class="track"><div class="fill" style="width:${i.value / max * 100}%"></div></div><div class="n">${i.display ?? i.value}</div></div>`).join('')}</div>
-    ${key && items.length > limit ? `<button class="btn small ghost more" data-act="showall" data-v="${key}">${all ? 'Show fewer' : `Show all ${items.length}`}</button>` : ''}`;
-}
-function split(name, entries) {
-  const total = entries.reduce((t, e) => t + e.value, 0) || 1;
-  const live = entries.filter(e => e.value);
-  return `<div class="split"><div class="name">${name}</div>
-    <div class="stack">${live.map((e, i) => `<div style="flex:${e.value};background:${e.color || SERIES[i]}" data-tip="<b>${esc(e.label)}</b> · ${e.value} (${pct(e.value, total)}%)${e.sub ? `<div class='t-sub'>${esc(e.sub)}</div>` : ''}"></div>`).join('')}</div>
-    <div class="keys">${live.map((e, i) => `<span><i style="background:${e.color || SERIES[i]}"></i>${esc(e.label)} <b>${pct(e.value, total)}%</b></span>`).join('')}</div></div>`;
-}
-const codeSplit = (obj, labels) => Object.entries(obj).filter(([k]) => +k && labels[k]).sort((a, b) => +a[0] - +b[0])
-  .map(([k, v]) => ({ label: labels[k], value: v }))
-  .concat(obj[0] ? [{ label: 'Not set', value: obj[0], color: 'var(--axis)' }] : []);
-const tile = (v, k, x = '') => `<div class="card tile"><div class="v">${v}</div><div class="k">${k}</div>${x ? `<div class="x">${x}</div>` : ''}</div>`;
-const flightRef = f => `<button class="tag mono" data-act="edit" data-id="${f.id}" data-tip="${esc(`${f.A.label} → ${f.B.label}<div class='t-sub'>${date(f.date)} · ${f.airline || ''}</div>`)}">${esc(fname(f))} ${f.from}→${f.to}</button>`;
-
-// ---------- views
-function overview(list, s) {
-  if (!list.length) return `<div class="empty">No flights match these filters.</div>`;
-  const out = [];
-  if (state.filter.year) out.push(yearReview(list, s));
-  const topRoute = byCount(s.routes)[0], topAp = byCount(s.airports)[0], topAl = byCount(s.airlines)[0], topAc = byCount(s.aircraft)[0];
-  out.push(`<div class="grid g-tiles">
-    ${tile(s.count.toLocaleString(), 'Flights', `${(s.count / Math.max(1, new Set(list.map(f => f.year)).size)).toFixed(1)} per year`)}
-    ${tile(dist(s.km), 'Distance flown', `${(s.km / EARTH_KM).toFixed(2)}× around Earth · ${pct(s.km, MOON_KM)}% to the Moon`)}
-    ${tile(durLong(s.minutes), 'Time in the air', `${(s.minutes / 60).toFixed(0)} hours · avg ${dur(s.minutes / s.count)}`)}
-    ${tile(s.airports.size, 'Airports', `${s.countries.size} countries · ${s.continents.size} continents`)}
-    ${tile(s.airlines.size, 'Airlines', `${Object.keys(s.alliance).filter(k => k !== 'Unaffiliated').length} alliances`)}
-    ${tile(s.aircraft.size, 'Aircraft types', `${s.regs.size} tails logged`)}
-    ${tile(s.routes.size, 'Unique routes', `${list.filter(f => f.dateline).length} date-line crossings`)}
-    ${tile(`${(s.co2 / 1000).toFixed(1)} t`, 'CO₂ (rough estimate)', 'per-passenger, distance & class based')}
-  </div>`);
-  const rec = (k, v, d, f) => `<div class="record"><div class="k">${k}</div><div><div class="v">${v}</div><div class="d">${d}</div></div>${f ? '' : ''}</div>`;
-  out.push(`<h3 class="section-title">Records</h3><div class="card"><div class="records">
-    ${s.longest ? rec('Longest flight', `${fname(s.longest)} ${s.longest.from} → ${s.longest.to}`, `${dist(s.longest.dist)} · ${date(s.longest.date)}`) : ''}
-    ${s.longestTime ? rec('Longest in the air', `${dur(s.longestTime.dur)}`, `${fname(s.longestTime)} ${s.longestTime.from} → ${s.longestTime.to} · ${date(s.longestTime.date)}`) : ''}
-    ${s.shortest ? rec('Shortest flight', `${fname(s.shortest)} ${s.shortest.from} → ${s.shortest.to}`, `${dist(s.shortest.dist)} · ${date(s.shortest.date)}`) : ''}
-    ${s.north ? rec('Farthest north', `${s.north.maxLat.toFixed(1)}°N`, `over the route ${s.north.from} → ${s.north.to}`) : ''}
-    ${s.south ? rec('Farthest south', `${Math.abs(s.south.minLat).toFixed(1)}°${s.south.minLat < 0 ? 'S' : 'N'}`, `${s.south.from} → ${s.south.to}`) : ''}
-    ${topRoute ? rec('Most-flown route', `${topRoute.a.iata} ⇄ ${topRoute.b.iata}`, `${plural(topRoute.count, 'flight')} · ${topRoute.a.city} – ${topRoute.b.city}`) : ''}
-    ${topAp ? rec('Home base', `${topAp.code}`, `${topAp.a.label} · ${plural(topAp.count, 'visit')}`) : ''}
-    ${topAl ? rec('Favorite airline', esc(topAl.name), `${plural(topAl.count, 'flight')} · ${dist(topAl.km)}`) : ''}
-    ${topAc ? rec('Favorite aircraft', esc(topAc.name), `${plural(topAc.count, 'flight')}`) : ''}
-  </div></div>`);
-
-  // Charts
-  const allYears = summarize(state.all.filter(f => matchesExceptYear(f))).years;
-  const ys = [...allYears.keys()].sort();
-  const yr = ys.length ? Array.from({ length: ys.at(-1) - ys[0] + 1 }, (_, i) => ys[0] + i) : [];
-  const yearItems = yr.map(y => {
-    const d = allYears.get(y) || { count: 0, km: 0, minutes: 0 };
-    return { label: `’${String(y).slice(2)}`, value: d.count, sel: state.filter.year === y, faded: state.filter.year && state.filter.year !== y,
-      tip: `<b>${y}</b> · ${plural(d.count, 'flight')}<div class='t-sub'>${dist(d.km)} · ${durLong(d.minutes)} in the air</div>`, act: `data-act="year" data-v="${state.filter.year === y ? '' : y}"` };
-  });
-  out.push(`<h3 class="section-title">When you fly</h3><div class="grid g-2">
-    <div class="card"><h3>Flights per year</h3><div class="sub">Click a year to see its review</div>${colChart(yearItems)}</div>
-    <div class="card"><h3>Activity</h3><div class="sub">Flights per month, every year</div>${heatmap(state.all.filter(f => matchesExceptYear(f)))}</div>
-  </div><div class="grid g-3" style="margin-top:16px">
-    <div class="card"><h3>Month</h3><div class="sub">All years combined</div>${colChart(s.months.map((v, i) => ({ label: MONTHS[i][0], value: v, tip: `<b>${MONTHS[i]}</b> · ${plural(v, 'flight')}` })))}</div>
-    <div class="card"><h3>Day of week</h3><div class="sub">By departure date</div>${colChart(s.dows.map((v, i) => ({ label: DOWS[i], value: v, tip: `<b>${DOWS[i]}</b> · ${plural(v, 'flight')}` })))}</div>
-    <div class="card"><h3>Departure hour</h3><div class="sub">Local time at origin</div>${colChart(s.hours.map((v, i) => ({ label: i % 6 === 0 ? String(i).padStart(2, '0') : '', value: v, tip: `<b>${String(i).padStart(2, '0')}:00–${String(i).padStart(2, '0')}:59</b> · ${plural(v, 'departure')}` })), { values: false })}</div>
-  </div>`);
-  out.push(`<h3 class="section-title">How you fly</h3><div class="grid g-2">
-    <div class="card">
-      ${split('Seat', codeSplit(s.seatType, SEAT_TYPES))}
-      ${split('Class', codeSplit(s.cls, CLASSES))}
-      ${split('Reason', codeSplit(s.reason, REASONS))}
-      ${split('Haul', HAULS.map(h => ({ label: h, value: s.haul[h] || 0, sub: HAUL_RANGES[h] })))}
-      ${split('Alliance', ['Star Alliance', 'SkyTeam', 'oneworld', 'Unaffiliated'].map((k, i) => ({ label: k, value: s.alliance[k] || 0, color: i === 3 ? 'var(--axis)' : SERIES[i] })))}
+function topCard(card, list) {
+  const metric = state.cardMetric[card.id] || 'flights';
+  const items = aggregate(card, list).sort((a, b) => b[metric] - a[metric] || b.flights - a.flights);
+  const top = items.slice(0, 7), max = top[0]?.[metric] || 1;
+  return `<div class="card top-card c-${card.color}">
+    <div class="head"><h3>${card.title}</h3>
+      <button class="expand" data-act="compare" data-v="${card.id}" aria-label="Compare all ${card.unit}" data-tip="Compare all">
+        <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M14 3h7v7h-2V6.4l-6.3 6.3-1.4-1.4L17.6 5H14zM5 5h6v2H7v10h10v-4h2v6H5z"/></svg></button>
+      <div class="rows">${top.map(i => `<div class="row" data-act="${card.filter ? 'card-filter' : 'compare'}" data-card="${card.id}" data-v="${esc(i.key)}" data-tip="<b>${esc(i.sub)}</b><div class='t-sub'>${metricText(metric, i[metric])}</div>">
+        <span class="lbl">${esc(i.label)}</span><span class="barcell"><span class="bar" data-w="${i[metric] / max * 100}"></span><span class="n">${metricShort(metric, i[metric])}</span></span></div>`).join('')
+        || '<div class="row"><span class="lbl">—</span></div>'}</div>
     </div>
-    <div class="card"><h3>Top routes</h3><div class="sub">Both directions combined</div>
-      ${hbars(byCount(s.routes).map(r => ({ label: `<span class="mono">${r.a.iata} ⇄ ${r.b.iata}</span> <span class="muted">${esc(r.a.city)} – ${esc(r.b.city)}</span>`, value: r.count, tip: `${dist(r.km)} each way`, act: `data-act="route" data-v="${r.key}"` })), { limit: 10, key: 'ov-routes' })}
-    </div>
-  </div>`);
-  return out.join('');
-}
-
-function matchesExceptYear(f) {
-  const y = state.filter.year; state.filter.year = null;
-  const ok = filteredOne(f); state.filter.year = y; return ok;
-}
-function filteredOne(f) {
-  const { year, airport, airline, route, aircraft, q } = state.filter;
-  const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  return (!year || f.year === year) && (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
-    && (!route || f.routeKey === route) && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t));
-}
-
-function heatmap(list) {
-  const counts = new Map();
-  for (const f of list) counts.set(`${f.year}-${f.month}`, (counts.get(`${f.year}-${f.month}`) || 0) + 1);
-  const years = [...new Set(list.map(f => f.year))].sort();
-  if (!years.length) return '';
-  const all = Array.from({ length: years.at(-1) - years[0] + 1 }, (_, i) => years[0] + i);
-  const max = Math.max(1, ...counts.values());
-  const step = v => v === 0 ? 0 : Math.min(5, 1 + Math.floor((v - 1) / max * 5));
-  return `<div class="heat" style="grid-template-columns:36px repeat(12,1fr)">
-    <span></span>${MONTHS.map(m => `<span class="h">${m[0]}</span>`).join('')}
-    ${all.map(y => `<span class="y" data-act="year" data-v="${y}">${y}</span>${MONTHS.map((m, i) => {
-      const v = counts.get(`${y}-${i}`) || 0;
-      return `<span class="c" style="background:var(--seq-${step(v)})" data-tip="<b>${m} ${y}</b> · ${plural(v, 'flight')}"></span>`;
-    }).join('')}`).join('')}
-  </div><div class="heat-legend">Fewer ${[0, 1, 2, 3, 4, 5].map(i => `<i style="background:var(--seq-${i})"></i>`).join('')} More</div>`;
-}
-
-function yearReview(list, s) {
-  const y = state.filter.year, fr = firsts(state.all, list);
-  const prev = state.all.filter(f => f.year === y - 1), prevKm = prev.reduce((t, f) => t + (f.dist || 0), 0);
-  const delta = prev.length ? Math.round((s.km - prevKm) / prevKm * 100) : null;
-  const tags = arr => arr.length ? `<div class="tagrow">${arr.slice(0, 18).map(t => `<span class="tag">${esc(t)}</span>`).join('')}${arr.length > 18 ? `<span class="muted">+${arr.length - 18}</span>` : ''}</div>` : '<span class="muted">None</span>';
-  const topRoute = byCount(s.routes)[0];
-  return `<div class="review">
-    <h2>${y} in the air</h2>
-    <div class="lede">${plural(s.count, 'flight')} · ${dist(s.km)} · ${durLong(s.minutes)} airborne${delta != null ? ` · <span data-tip="Distance vs ${y - 1}">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}% vs ${y - 1}</span>` : ''}</div>
-    <div class="cols">
-      <div><div class="k">New airports</div>${tags(fr.airports)}</div>
-      <div><div class="k">New countries</div>${tags(fr.countries)}</div>
-      <div><div class="k">New airlines</div>${tags(fr.airlines)}</div>
-      <div><div class="k">New aircraft types</div>${tags(fr.aircraft)}</div>
-      <div><div class="k">Most-flown route</div>${topRoute ? `<b>${topRoute.a.iata} ⇄ ${topRoute.b.iata}</b> <span class="muted">×${topRoute.count}</span>` : '—'}</div>
-      <div><div class="k">Longest flight</div>${s.longest ? `<b>${esc(fname(s.longest))} ${s.longest.from}→${s.longest.to}</b> <span class="muted">${dist(s.longest.dist)}</span>` : '—'}</div>
+    <div class="foot"><div><div class="v">${items.length}</div><div class="k">total ${card.unit}</div></div>
+      ${card.metrics.length > 1 ? `<div class="toggles">${card.metrics.slice(0, 2).map(mt => `<button class="pill ${mt === metric ? 'on' : ''}" data-act="card-metric" data-card="${card.id}" data-v="${mt}">${METRIC_LABEL[mt]}</button>`).join('')}</div>` : ''}
     </div></div>`;
 }
+const growBars = root => setTimeout(() => root.querySelectorAll('[data-w]').forEach(b => { b.style.width = `calc(${b.dataset.w}% - ${b.dataset.w * 0.34}px)`; }), 30);
 
+// Full comparison for one card, as a pop-up bar chart.
+function openCompare(id, metric) {
+  const card = CARDS.find(c => c.id === id);
+  metric ||= state.cardMetric[id] || 'flights';
+  const items = aggregate(card, current.list).sort((a, b) => b[metric] - a[metric] || b.flights - a.flights);
+  const total = items.reduce((t, i) => t + i[metric], 0), max = items[0]?.[metric] || 1;
+  $('#compare').innerHTML = `<div class="head" style="background:linear-gradient(180deg,var(--${card.color}-1),var(--${card.color}-2))">
+      <h2>${card.title.replace('Top ', 'All ')} · ${state.filter.year || 'all years'}</h2>
+      <div class="metrics">${['flights', 'distance', 'time'].map(mt => `<button class="pill ${mt === metric ? 'on' : ''}" data-cmp="${id}" data-v="${mt}">${METRIC_LABEL[mt]}</button>`).join('')}</div>
+      <button class="x" data-close aria-label="Close">✕</button></div>
+    <div class="body">${items.map((i, ix) => `<div class="cmp-row" ${card.filter ? `data-cmp-filter="${card.filter}" data-v="${esc(i.key)}"` : ''}>
+        <div class="lbl"><b>${esc(i.label)}</b><span class="muted">${esc(i.sub !== i.label ? i.sub : '')}</span></div>
+        <div class="track"><div class="fill" data-w="${i[metric] / max * 100}" style="background:var(--${card.color}-1);transition-delay:${Math.min(ix, 20) * 18}ms"></div></div>
+        <div class="val">${metricText(metric, i[metric])}<small>${pct(i[metric], total)}%</small></div></div>`).join('') || '<div class="empty">Nothing here yet.</div>'}</div>`;
+  const dlg = $('#dlg-compare');
+  if (!dlg.open) dlg.showModal();
+  setTimeout(() => dlg.querySelectorAll('.fill').forEach(b => { b.style.width = b.dataset.w + '%'; }), 30);
+}
+$('#dlg-compare').addEventListener('click', e => {
+  const dlg = $('#dlg-compare');
+  if (e.target === dlg || e.target.closest('[data-close]')) return dlg.close();
+  const m = e.target.closest('[data-cmp]'); if (m) return openCompare(m.dataset.cmp, m.dataset.v);
+  const f = e.target.closest('[data-cmp-filter]');
+  if (f) { dlg.close(); state.filter[f.dataset.cmpFilter] = f.dataset.v; go('flights'); }
+});
+
+function yearsFlying() {
+  const ys = state.all.map(f => f.year);
+  return ys.length ? Math.max(...ys) - Math.min(...ys) + 1 : 0;
+}
+// Smooth white line-and-area charts on the colored cards.
+function drawTrends(s) {
+  const ys = state.all.map(f => f.year);
+  const all = summarize(state.all).years;
+  const years = ys.length ? Array.from({ length: Math.max(...ys) - Math.min(...ys) + 1 }, (_, i) => Math.min(...ys) + i) : [];
+  trend($('#ch-year'), years.map(y => ({ label: String(y), value: all.get(y)?.count || 0, sel: state.filter.year === y, year: y,
+    tip: `<b>${y}</b> · ${plural(all.get(y)?.count || 0, 'flight')}<div class='t-sub'>${dist(all.get(y)?.km || 0)}</div>` })), 170);
+  trend($('#ch-month'), s.months.map((v, i) => ({ label: MONTHS[i], value: v, tip: `<b>${MONTHS[i]}</b> · ${plural(v, 'flight')}` })), 140);
+  trend($('#ch-dow'), s.dows.map((v, i) => ({ label: DOWS[i], value: v, tip: `<b>${DOWS[i]}</b> · ${plural(v, 'flight')}` })), 140);
+}
+function trend(el, pts, H) {
+  if (!el) return;
+  const W = Math.max(280, el.clientWidth - 32), padL = 26, padB = 22, padT = 14;
+  const max = Math.max(1, ...pts.map(p => p.value)), step = niceStep(max), top = Math.ceil(max / step) * step;
+  const x = i => padL + (pts.length < 2 ? (W - padL) / 2 : i * (W - padL - 8) / (pts.length - 1));
+  const y = v => padT + (1 - v / top) * (H - padT - padB);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.value)}`).join('');
+  const grid = []; for (let v = 0; v <= top; v += step) grid.push(v);
+  const every = Math.ceil(pts.length / Math.max(1, Math.floor(W / 46)));
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">
+    ${grid.map(v => `<line class="grid" x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${padL - 6}" y="${y(v) + 3.5}" text-anchor="end">${v}</text>`).join('')}
+    ${pts.length ? `<path class="area" d="${line}L${x(pts.length - 1)},${y(0)}L${x(0)},${y(0)}Z"/><path class="line" d="${line}"/>` : ''}
+    ${pts.map((p, i) => `<rect class="hit" x="${x(i) - 14}" y="0" width="28" height="${H - padB}" data-tip="${esc(p.tip)}" ${p.year ? `data-act="year-pick" data-v="${p.year}"` : ''}/>
+      <circle class="dot ${p.sel ? 'sel' : ''}" cx="${x(i)}" cy="${y(p.value)}" r="4"/>
+      ${i % every === 0 ? `<text x="${x(i)}" y="${H - 5}" text-anchor="middle">${p.label}</text>` : ''}`).join('')}
+  </svg>`;
+}
+function niceStep(max) {
+  const raw = max / 3, p = 10 ** Math.floor(Math.log10(raw)), n = raw / p;
+  return Math.max(1, (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p);
+}
+let resizeTimer;
+new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (state.page === 'profile' && current.s) drawTrends(current.s); }, 120); }).observe($('#stats'));
+
+// ---------- flights page
 const COLS = [
   ['sortTime', 'Date'], ['flightNumber', 'Flight'], ['from', 'From'], ['to', 'To'], ['depTime', 'Dep'], ['arrTime', 'Arr'],
   ['dur', 'Duration', 'r'], ['dist', 'Distance', 'r'], ['airline', 'Airline'], ['aircraft', 'Aircraft'], ['registration', 'Reg'],
   ['seat', 'Seat'], ['cls', 'Class'], ['reason', 'Reason'], ['note', 'Note'],
 ];
-function flightsView(list) {
+function renderFlights() {
+  const list = flightsFiltered();
   const { key, dir } = state.sort;
   const rows = [...list].sort((a, b) => {
     const x = a[key] ?? '', y = b[key] ?? '';
     return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y))) * dir || (a.sortTime - b.sortTime) * dir;
   });
-  const sevColor = { error: 'var(--critical)', warn: 'var(--warning)', info: 'var(--muted)' };
+  const sevColor = { error: 'var(--critical)', warn: 'var(--warning)', info: '#9aa0a6' };
+  const f0 = state.filter, chips = [];
+  if (f0.airport) chips.push(['airport', `Airport: ${f0.airport}`]);
+  if (f0.airline) chips.push(['airline', `Airline: ${f0.airline}`]);
+  if (f0.route) chips.push(['route', `Route: ${f0.route.replace('–', ' ⇄ ')}`]);
+  if (f0.aircraft) chips.push(['aircraft', `Aircraft: ${f0.aircraft}`]);
   let lastYear = null;
   const body = rows.map(f => {
     let sep = '';
@@ -475,117 +530,35 @@ function flightsView(list) {
     const iss = state.issueBy.get(f.id);
     const seat = [f.seat, SEAT_TYPES[f.seatType]].filter(Boolean).join(' · ');
     return sep + `<tr data-act="edit" data-id="${f.id}" data-route="${f.routeKey}">
-      <td class="num">${f.date}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data health</div>"></span>` : ''}</td>
+      <td class="num">${f.date}${iss ? `<span class="flag-dot" style="background:${sevColor[iss.severity]}" data-tip="${esc(iss.title)}<div class='t-sub'>See Data check</div>"></span>` : ''}</td>
       <td class="mono">${esc(f.flightNumber)}</td>
-      <td data-tip="${esc(f.A.label)}"><span class="mono">${f.from}</span> <span class="muted">${esc(f.A.city)}</span></td>
-      <td data-tip="${esc(f.B.label)}"><span class="mono">${f.to}</span> <span class="muted">${esc(f.B.city)}</span></td>
+      <td data-tip="${esc(f.A.label)}"><b>${f.from}</b> <span class="muted">${esc(f.A.city)}</span></td>
+      <td data-tip="${esc(f.B.label)}"><b>${f.to}</b> <span class="muted">${esc(f.B.city)}</span></td>
       <td class="num">${f.depTime || ''}</td><td class="num">${f.arrTime || ''}</td>
-      <td class="r num ${f.durSource !== 'logged' ? 'est' : ''}" ${f.durSource !== 'logged' ? `data-tip="${f.durSource === 'timezones' ? 'Computed from times & time zones' : 'Estimated from distance'}"` : ''}>${f.durSource === 'estimate' ? '~' : ''}${dur(f.dur)}</td>
+      <td class="r num ${f.durSource !== 'logged' ? 'est' : ''}" ${f.durSource !== 'logged' ? `data-tip="${f.durSource === 'timezones' ? 'Computed from times &amp; time zones' : 'Estimated from distance'}"` : ''}>${f.durSource === 'estimate' ? '~' : ''}${dur(f.dur)}</td>
       <td class="r num">${dist(f.dist)}</td>
       <td>${esc(f.airline)}</td><td data-tip="${esc(f.aircraftCode)}">${esc(f.aircraft)}</td>
       <td class="mono">${esc(f.registration)}</td><td>${esc(seat)}</td><td>${CLASSES[f.cls] || ''}</td><td>${REASONS[f.reason] || ''}</td>
       <td class="muted">${esc(f.note)}</td></tr>`;
   }).join('');
-  return `<div class="toolbar"><span class="count">${plural(list.length, 'flight')} · ${dist(list.reduce((t, f) => t + (f.dist || 0), 0))}</span>
-    <div class="spacer"></div><span class="muted">Click a row to edit · <kbd>N</kbd> new · <kbd>/</kbd> search</span>
-    <button class="btn primary small" data-act="add">+ Add flight</button></div>
+  const page = $('#page-flights');
+  const hadFocus = document.activeElement?.id === 'search';
+  page.innerHTML = `<div class="toolbar">
+      <input class="search" id="search" type="search" placeholder="Search flights, airports, tails…" value="${esc(state.filter.q)}">
+      <select data-year aria-label="Year"></select>
+      ${chips.map(([k, l]) => `<span class="chipf">${esc(l)}<button data-act="unfilter" data-v="${k}" aria-label="Remove filter">✕</button></span>`).join('')}
+      <span class="muted">${plural(list.length, 'flight')} · ${dist(list.reduce((t, f) => t + (f.dist || 0), 0))}</span>
+      <div class="spacer"></div><span class="muted">Click a row to edit · <kbd>N</kbd> new · <kbd>/</kbd> search</span></div>
     <div class="table-wrap"><table><thead><tr>${COLS.map(([k, l, c]) => `<th class="${c || ''} ${key === k ? 'sorted' + (dir > 0 ? ' asc' : '') : ''}" data-act="sort" data-v="${k}">${l}</th>`).join('')}</tr></thead>
     <tbody>${body || `<tr><td colspan="${COLS.length}" class="empty">No flights match.</td></tr>`}</tbody></table></div>`;
+  renderYearSelect();
+  const s = $('#search');
+  s.oninput = () => { clearTimeout(s.t); s.t = setTimeout(() => { state.filter.q = s.value; renderFlights(); }, 150); };
+  if (hadFocus) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
-function places(list, s) {
-  const aps = byCount(s.airports);
-  const ctry = [...s.countries.values()].sort((a, b) => b.count - a.count);
-  const cont = {}; for (const a of aps) if (a.a.continent) cont[a.a.continent] = (cont[a.a.continent] || 0) + a.count;
-  const custom = Object.values(state.db.customAirports || {});
-  return `<div class="grid g-2">
-    <div class="card"><div class="card-head"><h3>Airports</h3><span class="muted">${aps.length} visited · click to filter</span></div>
-      ${hbars(aps.map(a => ({ label: `<span class="mono">${a.code}</span> <span class="muted">${esc(a.a.label)}${a.a.unknown ? ' ⚠' : ''}</span>`, value: a.count,
-        tip: `<b>${a.code}</b> · ${esc(a.a.label)}<div class='t-sub'>${a.deps} departures · ${a.arrs} arrivals · first ${a.first}, last ${a.last}</div>`, act: `data-act="airport" data-v="${a.code}"` })), { limit: 15, key: 'aps' })}
-    </div>
-    <div>
-      <div class="card"><div class="card-head"><h3>Countries &amp; territories</h3><span class="muted">${ctry.length} visited</span></div>
-        ${hbars(ctry.map(c => ({ label: `${esc(c.name)} <span class="muted">${c.airports.size} airport${c.airports.size > 1 ? 's' : ''}</span>`, value: c.count, tip: `Airports: ${[...c.airports].join(', ')}` })), { limit: 12, key: 'ctry' })}
-        <div style="margin-top:16px">${split('Continents (airport visits)', Object.entries(cont).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: k, value: v })))}</div>
-      </div>
-      <div class="card" style="margin-top:16px"><div class="card-head"><h3>Custom airports</h3><button class="btn small" data-act="add-airport">+ Add airport</button></div>
-        ${custom.length ? custom.map(a => `<div class="record"><div class="k mono">${esc(a.iata)}</div><div><div class="v">${esc(a.city)} / ${esc(a.name)}</div><div class="d">${a.lat}, ${a.lon} · ${esc(a.tz || 'no time zone')}</div></div><div class="spacer"></div><button class="btn small" data-act="edit-airport" data-v="${esc(a.iata)}">Edit</button></div>`).join('')
-        : '<div class="muted">Airports outside the built-in list can be added here, with coordinates and time zone.</div>'}
-      </div>
-    </div></div>`;
-}
-
-function fleet(list, s) {
-  const airlines = byCount(s.airlines), aircraft = byCount(s.aircraft);
-  const tails = new Map();
-  for (const f of list) if (f.registration) {
-    if (!tails.has(f.registration)) tails.set(f.registration, { reg: f.registration, count: 0, f, dates: [] });
-    const t = tails.get(f.registration); t.count++; t.dates.push(f.date);
-  }
-  const tl = [...tails.values()].sort((a, b) => b.count - a.count || b.f.sortTime - a.f.sortTime);
-  return `<div class="grid g-2">
-    <div class="card"><div class="card-head"><h3>Airlines</h3><span class="muted">${airlines.length} flown · click to filter</span></div>
-      ${hbars(airlines.map(a => ({ label: `${esc(a.name)} <span class="muted mono">${esc(a.iata)}</span>`, value: a.count, tip: `${dist(a.km)} · first flown ${a.first}`, act: `data-act="airline" data-v="${esc(a.name)}"` })), { limit: 12, key: 'airlines' })}
-    </div>
-    <div class="card"><div class="card-head"><h3>Aircraft types</h3><span class="muted">${aircraft.length} types</span></div>
-      ${hbars(aircraft.map(a => ({ label: `${esc(a.name)} <span class="muted mono">${esc(a.code)}</span>`, value: a.count, tip: `${dist(a.km)}${a.regs.size ? ` · tails: ${[...a.regs].join(', ')}` : ''}`, act: `data-act="aircraft" data-v="${esc(a.code || a.name)}"` })), { limit: 12, key: 'aircraft' })}
-    </div>
-    <div class="card">
-      ${split('Manufacturer', byCount(s.manufacturer).slice(0, 7).map(m => ({ label: m.name, value: m.count })))}
-      ${split('Alliance', ['Star Alliance', 'SkyTeam', 'oneworld', 'Unaffiliated'].map((k, i) => ({ label: k, value: s.alliance[k] || 0, color: i === 3 ? 'var(--axis)' : SERIES[i] })))}
-      <div style="margin-top:16px">${split('Wide-body vs narrow-body', [
-        { label: 'Wide-body', value: list.filter(f => /^(A3[3-5]|A38|B7[4-8]|B77|B78)/.test(f.aircraftCode)).length },
-        { label: 'Narrow-body', value: list.filter(f => /^(A2|A3[12]|A19|A20|A21|A22|B7[1-3]|B3|B75|E1|E7|E9|CRJ|C[0-9]|BCS)/.test(f.aircraftCode)).length },
-        { label: 'Turboprop & other', value: list.filter(f => f.aircraftCode && !/^(A3[3-5]|A38|B7|B3|A2|A3[12]|A19|A20|A21|A22|E1|E7|E9|CRJ|BCS)/.test(f.aircraftCode)).length },
-      ])}</div>
-    </div>
-    <div class="card"><div class="card-head"><h3>Tail numbers</h3><span class="muted">${tl.length} logged · ${pct(list.filter(f => f.registration).length, list.length)}% of flights</span></div>
-      ${tl.length ? `<div class="table-wrap" style="max-height:360px"><table><thead><tr><th>Registration</th><th>Type</th><th>Airline</th><th class="r">Flown</th><th>Last</th></tr></thead><tbody>
-        ${tl.map(t => `<tr data-act="edit" data-id="${t.f.id}"><td class="mono">${esc(t.reg)}</td><td>${esc(t.f.aircraftCode)}</td><td>${esc(t.f.airline)}</td><td class="r">${t.count > 1 ? `<b>${t.count}×</b>` : '1×'}</td><td class="num">${t.dates.at(-1)}</td></tr>`).join('')}
-      </tbody></table></div>` : '<div class="muted">Add registrations to your flights to track individual aircraft.</div>'}
-    </div></div>`;
-}
-
-function trips(list, s) {
-  const js = journeys(list);
-  const multi = js.filter(j => j.legs.length > 1);
-  const shown = (state.tripsAll ? js : multi).slice().reverse();
-  const longest = [...js].sort((a, b) => b.total - a.total)[0];
-  return `<div class="grid g-tiles" style="margin-bottom:16px">
-    ${tile(js.length, 'Journeys', 'legs joined when you connect within 24 h')}
-    ${tile(multi.length, 'With connections', `${pct(multi.length, js.length)}% of journeys`)}
-    ${tile(longest ? durLong(longest.total) : '—', 'Longest door-to-door', longest ? `${longest.legs[0].from} → ${longest.legs.at(-1).to}` : '')}
-    ${tile(s.routes.size, 'Unique routes', `${[...s.routes.values()].filter(r => r.count > 1).length} flown more than once`)}
-  </div>
-  <div class="grid g-2">
-    <div class="card"><div class="card-head"><h3>Journeys</h3>
-      <button class="btn small" data-act="trips-all">${state.tripsAll ? 'Only connections' : 'Show single legs too'}</button></div>
-      ${shown.map(j => {
-        const codes = [j.legs[0].from, ...j.legs.map(f => f.to)];
-        const detour = j.direct ? j.km / j.direct : null;
-        return `<div class="journey" data-act="edit" data-id="${j.legs[0].id}" data-route="${j.legs.map(f => f.routeKey).join(' ')}">
-          <div class="num">${j.legs[0].date}</div>
-          <div class="legs">${codes.map((c, i) => `<span class="code">${c}</span>${i < codes.length - 1 ? `<span class="arrow" data-tip="${esc(fname(j.legs[i]))} · ${dur(j.legs[i].dur)}">→</span>` : ''}`).join('')}</div>
-          <div class="meta">${dist(j.km)} · ${durLong(j.total)} door-to-door${detour && j.legs.length > 1 ? `<br><span class="muted" data-tip="Distance flown vs. a direct flight">${detour.toFixed(2)}× direct</span>` : ''}</div></div>`;
-      }).join('') || '<div class="muted">No multi-leg journeys in this view.</div>'}
-    </div>
-    <div class="card"><div class="card-head"><h3>Routes</h3><span class="muted">click to filter</span></div>
-      ${hbars(byCount(s.routes).map(r => ({ label: `<span class="mono">${r.a.iata} ⇄ ${r.b.iata}</span> <span class="muted">${dist(r.km)}</span>`, value: r.count, act: `data-act="route" data-v="${r.key}"`, tip: `${esc(r.a.label)} – ${esc(r.b.label)}` })), { limit: 20, key: 'routes' })}
-    </div></div>`;
-}
-
-function achievementsView() {
-  const s = summarize(state.all), list = achievements(state.all, s);
-  const got = list.filter(a => a.got).length;
-  return `<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>${got} of ${list.length} unlocked</h3><span class="muted">All-time, regardless of filters</span></div>
-    <div class="meter"><i style="width:${pct(got, list.length)}%"></i></div></div>
-    <div class="ach-grid">${list.sort((a, b) => b.got - a.got || (b.progress || 0) - (a.progress || 0)).map(a => `<div class="ach ${a.got ? '' : 'locked'}">
-      <div class="ic">${a.icon}</div><div style="flex:1"><div class="t">${a.title}</div><div class="d">${a.desc}</div>
-      ${a.got ? '<div class="got">✓ Unlocked</div>' : a.progress != null ? `<div class="prog"><i style="width:${a.progress * 100}%"></i></div><div class="d">${Math.round(a.progress * 100)}%</div>` : ''}
-      </div></div>`).join('')}</div>`;
-}
-
-function health() {
+// ---------- data check page
+function renderCheck() {
   const all = state.all, n = all.length;
   const fields = [
     ['Departure & arrival times', f => f.depTime && f.arrTime && !(f.depTime === '00:00' && f.arrTime === '00:00')],
@@ -593,37 +566,33 @@ function health() {
     ['Seat number', f => f.seat], ['Seat type', f => f.seatType], ['Flight reason', f => f.reason],
   ];
   const sevLabel = { error: ['!', 'Error'], warn: ['!', 'Warning'], info: ['i', 'Info'] };
-  const visible = state.issues.filter(i => (state.healthSev === 'all' ? !i.dismissed : state.healthSev === 'dismissed' ? i.dismissed : i.severity === state.healthSev && !i.dismissed));
+  const visible = state.issues.filter(i => state.healthSev === 'all' ? !i.dismissed : state.healthSev === 'dismissed' ? i.dismissed : i.severity === state.healthSev && !i.dismissed);
   const count = sev => state.issues.filter(i => i.severity === sev && !i.dismissed).length;
   const byId = new Map(all.map(f => [f.id, f]));
-  const fixBtn = i => {
-    if (!i.fix) return '';
-    if (i.fix.kind === 'airport') return `<button class="btn small primary" data-act="fix-airport" data-v="${i.fix.code}">Add airport</button>`;
-    return `<button class="btn small primary" data-act="fix" data-v="${esc(i.id)}">${esc(i.fix.label)}</button>`;
-  };
-  return `<div class="grid g-2" style="margin-bottom:16px">
-    <div class="card"><h3>Logbook completeness</h3><div class="sub">Share of all ${n} flights with each field filled in</div>
-      ${fields.map(([l, fn]) => { const c = all.filter(fn).length; return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${l}</span><span class="num ink2">${pct(c, n)}% <span class="muted">(${c})</span></span></div><div class="meter"><i style="width:${pct(c, n)}%"></i></div></div>`; }).join('')}
-    </div>
-    <div class="card"><h3>What gets checked</h3><div class="sub">Each check runs on every save</div>
-      <ul style="margin:0;padding-left:18px;color:var(--ink-2);line-height:1.7">
-        <li>Logged duration vs. local times converted through both airports' time zones</li>
-        <li>Implausible block speed for the great-circle distance</li>
-        <li>Overlapping flights and impossible hops between consecutive flights</li>
-        <li>Same flight number and direction twice with no return, which is often a mis-logged return leg</li>
-        <li>Exact duplicates, unknown airports, placeholder times</li>
-      </ul></div>
-  </div>
-  <div class="card"><div class="card-head"><h3>Findings</h3>
-    <div class="chips">${[['all', 'All open'], ['error', `Errors ${count('error')}`], ['warn', `Warnings ${count('warn')}`], ['info', `Info ${count('info')}`], ['dismissed', `Dismissed ${state.issues.filter(i => i.dismissed).length}`]]
-      .map(([k, l]) => `<button class="chip ${state.healthSev === k ? 'on' : ''}" data-act="health-sev" data-v="${k}">${l}</button>`).join('')}</div></div>
-    ${visible.map(i => `<div class="issue">
-      <div class="sev ${i.severity}"><i>${sevLabel[i.severity][0]}</i>${sevLabel[i.severity][1]}</div>
-      <div><div class="t">${esc(i.title)}</div><div class="d">${esc(i.detail)}</div>
-        <div class="tagrow" style="margin-top:6px">${[...new Set(i.ids)].map(id => byId.get(id)).filter(Boolean).map(flightRef).join('')}</div></div>
-      <div class="acts">${fixBtn(i)}<button class="btn small" data-act="${i.dismissed ? 'undismiss' : 'dismiss'}" data-v="${esc(i.id)}">${i.dismissed ? 'Restore' : 'Dismiss'}</button></div>
-    </div>`).join('') || '<div class="empty">✓ Nothing to review here.</div>'}
-  </div>`;
+  const ref = f => `<button class="tag mono" data-act="edit" data-id="${f.id}" data-tip="${esc(`${f.A.label} → ${f.B.label}<div class='t-sub'>${date(f.date)} · ${f.airline || ''}</div>`)}">${esc(fname(f))} ${f.from}→${f.to}</button>`;
+  const fixBtn = i => !i.fix ? '' : i.fix.kind === 'airport'
+    ? `<button class="btn small primary" data-act="fix-airport" data-v="${i.fix.code}">Add airport</button>`
+    : `<button class="btn small primary" data-act="fix" data-v="${esc(i.id)}">${esc(i.fix.label)}</button>`;
+  $('#page-check').innerHTML = `
+    <div class="card" style="padding:16px 18px;margin-bottom:16px">
+      <div class="section-h" style="margin-top:0">Logbook completeness</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px 24px">
+      ${fields.map(([l, fn]) => { const c = all.filter(fn).length; return `<div><div style="display:flex;justify-content:space-between;font-size:13px"><span>${l}</span><b>${pct(c, n)}%</b></div>
+        <div style="height:6px;background:var(--line);border-radius:3px;margin-top:4px;overflow:hidden"><i style="display:block;height:100%;width:${pct(c, n)}%;background:var(--teal-1)"></i></div></div>`; }).join('')}
+      </div></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)">
+        <div><b>Things to review</b> <span class="muted">· times vs. time zones, impossible speeds, overlaps, mis-logged return legs, duplicates</span></div>
+        <div class="chips">${[['all', 'All open'], ['error', `Errors ${count('error')}`], ['warn', `Warnings ${count('warn')}`], ['info', `Info ${count('info')}`], ['dismissed', `Dismissed ${state.issues.filter(i => i.dismissed).length}`]]
+          .map(([k, l]) => `<button class="chip ${state.healthSev === k ? 'on' : ''}" data-act="health-sev" data-v="${k}">${l}</button>`).join('')}</div>
+      </div>
+      ${visible.map(i => `<div class="issue">
+        <div class="sev ${i.severity}"><i>${sevLabel[i.severity][0]}</i>${sevLabel[i.severity][1]}</div>
+        <div><div class="t">${esc(i.title)}</div><div class="d">${esc(i.detail)}</div>
+          <div class="tagrow">${[...new Set(i.ids)].map(id => byId.get(id)).filter(Boolean).map(ref).join('')}</div></div>
+        <div class="acts">${fixBtn(i)}<button class="btn small" data-act="${i.dismissed ? 'undismiss' : 'dismiss'}" data-v="${esc(i.id)}">${i.dismissed ? 'Restore' : 'Dismiss'}</button></div>
+      </div>`).join('') || '<div class="empty">✓ Nothing to review here.</div>'}
+    </div>`;
 }
 
 // ---------- global click handling
@@ -631,35 +600,26 @@ document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el || el.closest('dialog')) return;
   const v = el.dataset.v, act = el.dataset.act;
-  const toggle = (k, val) => setFilter({ [k]: state.filter[k] === val ? null : val });
   switch (act) {
-    case 'year': setFilter({ year: v ? +v : null }); break;
-    case 'unfilter': if (v === 'q') $('#search').value = ''; setFilter({ [v]: v === 'q' ? '' : null }); break;
-    case 'clear-filters': $('#search').value = ''; setFilter({ year: null, airport: null, airline: null, route: null, aircraft: null, q: '' }); break;
-    case 'route': toggle('route', v); break;
-    case 'airport': toggle('airport', v); break;
-    case 'airline': toggle('airline', v); break;
-    case 'aircraft': toggle('aircraft', v); break;
+    case 'unfilter': setFilter({ [v]: null }); break;
+    case 'card-filter': { const card = CARDS.find(c => c.id === el.dataset.card); state.filter[card.filter] = v; go('flights'); break; }
+    case 'card-metric': state.cardMetric[el.dataset.card] = v; refresh(); break;
+    case 'compare': openCompare(v || el.dataset.card); break;
+    case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;
-    case 'add': openFlight(null); break;
-    case 'import': openImport(); break;
-    case 'sort': state.sort = { key: v, dir: state.sort.key === v ? -state.sort.dir : (v === 'sortTime' || v === 'dist' || v === 'dur' ? -1 : 1) }; renderView(); break;
-    case 'showall': state.showAll[v] = !state.showAll[v]; renderView(); break;
-    case 'trips-all': state.tripsAll = !state.tripsAll; renderView(); break;
-    case 'health-sev': state.healthSev = v; renderView(); break;
+    case 'sort': state.sort = { key: v, dir: state.sort.key === v ? -state.sort.dir : (v === 'sortTime' || v === 'dist' || v === 'dur' ? -1 : 1) }; renderFlights(); break;
+    case 'health-sev': state.healthSev = v; renderCheck(); break;
     case 'dismiss': commit(db => db.dismissed.push(v), 'Finding dismissed'); break;
     case 'undismiss': commit(db => { db.dismissed = db.dismissed.filter(x => x !== v); }); break;
     case 'fix': applyFix(state.issues.find(i => i.id === v)); break;
     case 'fix-airport': openAirport(v); break;
-    case 'add-airport': openAirport(null); break;
-    case 'edit-airport': openAirport(v); break;
   }
 });
-$('#view').addEventListener('mouseover', e => {
-  const r = e.target.closest('[data-route]');
+document.addEventListener('mouseover', e => {
+  if (state.page !== 'profile') return;
+  const r = e.target.closest?.('[data-route]');
   map.highlightRoutes(r ? r.dataset.route.split(' ') : null);
 });
-$('#view').addEventListener('mouseleave', () => map.highlightRoutes(null));
 
 function applyFix(issue) {
   if (!issue?.fix) return;
@@ -669,40 +629,36 @@ function applyFix(issue) {
   else if (kind === 'edit') openFlight(id, patch);
 }
 
-// ---------- top bar actions
-let searchTimer;
-$('#search').addEventListener('input', e => { clearTimeout(searchTimer); searchTimer = setTimeout(() => setFilter({ q: e.target.value }), 120); });
+// ---------- menu
 $('#btn-add').onclick = () => openFlight(null);
-$('#btn-import').onclick = () => openImport();
-$('#btn-units').onclick = () => { state.units = state.units === 'km' ? 'mi' : 'km'; store.set('units', state.units); $('#btn-units').textContent = state.units; refresh(); };
-function applyTheme() {
-  if (state.theme === 'auto') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.dataset.theme = state.theme;
-  $('#btn-theme').textContent = { auto: 'Auto', light: 'Light', dark: 'Dark' }[state.theme];
-  map.rerender();
-}
-$('#btn-theme').onclick = () => { state.theme = { auto: 'light', light: 'dark', dark: 'auto' }[state.theme]; store.set('theme', state.theme); applyTheme(); };
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => map.rerender());
-
-$('#btn-export').onclick = e => {
+$('#btn-menu').onclick = e => {
   e.stopPropagation();
   document.querySelector('.menu')?.remove();
-  const r = e.target.getBoundingClientRect();
+  const r = e.currentTarget.getBoundingClientRect();
   const m = document.createElement('div');
   m.className = 'menu';
-  m.style.top = (r.bottom + 6 + scrollY) + 'px'; m.style.left = Math.min(r.left, innerWidth - 240) + 'px';
-  m.innerHTML = `<button data-x="csv">CSV<small>myFlightradar24 format, re-importable</small></button>
-    <button data-x="csv-f">CSV of current view<small>${current.list.length} flights with current filters</small></button>
-    <button data-x="json">JSON backup<small>Everything, including custom airports</small></button>`;
+  m.style.top = (r.bottom + 6 + scrollY) + 'px'; m.style.left = Math.max(8, r.right - 260) + 'px';
+  m.innerHTML = `<button data-x="import">Import flights<small>myFlightradar24 CSV or Skylog backup</small></button>
+    <button data-x="csv">Export CSV<small>myFlightradar24 format, re-importable</small></button>
+    <button data-x="json">Export backup (JSON)<small>Everything, unencrypted. Keep it somewhere safe.</small></button>
+    <hr><button data-x="units">Units: ${state.units === 'km' ? 'kilometres' : 'miles'}<small>Switch to ${state.units === 'km' ? 'miles' : 'kilometres'}</small></button>
+    <button data-x="airport">Add custom airport<small>For airports missing from the built-in list</small></button>
+    ${hosted ? `<hr><button data-x="settings">Security &amp; sync<small>Password, GitHub token</small></button><button data-x="lock">Lock<small>Sign out on this device</small></button>` : ''}`;
   document.body.append(m);
   m.onclick = ev => {
     const x = ev.target.closest('button')?.dataset.x; if (!x) return;
-    const stamp = new Date().toISOString().slice(0, 10);
-    const apInfo = code => { const a = state.ap(code); return { label: `${a.city} / ${a.name || a.city}`, icao: a.icao }; };
-    const pick = x === 'csv-f' ? current.list.map(f => f.f) : state.db.flights;
-    if (x === 'json') download(`skylog-${stamp}.json`, JSON.stringify(state.db, null, 1), 'application/json');
-    else download(`skylog-${stamp}.csv`, toFR24CSV([...pick].sort((a, b) => a.date.localeCompare(b.date)), apInfo), 'text/csv');
     m.remove();
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (x === 'import') openImport();
+    if (x === 'csv') {
+      const apInfo = code => { const a = state.ap(code); return { label: `${a.city} / ${a.name || a.city}`, icao: a.icao }; };
+      download(`skylog-${stamp}.csv`, toFR24CSV([...state.db.flights].sort((a, b) => a.date.localeCompare(b.date)), apInfo), 'text/csv');
+    }
+    if (x === 'json') download(`skylog-${stamp}.json`, JSON.stringify(state.db, null, 1), 'application/json');
+    if (x === 'units') { state.units = state.units === 'km' ? 'mi' : 'km'; store.set('units', state.units); refresh(); }
+    if (x === 'airport') openAirport(null);
+    if (x === 'settings') openSettings();
+    if (x === 'lock') { if (unsynced() && !confirm('Some changes are not saved to GitHub yet. Lock anyway? (They stay on this device and upload next time.)')) return; sessionStorage.removeItem(KEY); localStorage.removeItem(KEY); location.reload(); }
   };
   setTimeout(() => document.addEventListener('click', () => m.remove(), { once: true }));
 };
@@ -714,11 +670,44 @@ function download(name, text, type) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.target.closest?.('input,textarea,select,dialog')) { if (e.key === 'Escape' && e.target.id === 'search') { e.target.value = ''; setFilter({ q: '' }); e.target.blur(); } return; }
-  if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
+  if (!gate.classList.contains('hidden')) return;
+  if (e.target.closest?.('input,textarea,select,dialog')) {
+    if (e.key === 'Escape' && e.target.id === 'search') { e.target.value = ''; state.filter.q = ''; renderFlights(); e.target.blur(); }
+    return;
+  }
+  if (e.key === '/') { e.preventDefault(); if (state.page !== 'flights') go('flights'); $('#search')?.focus(); }
   else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openFlight(null); }
   else if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
   else if (e.key === 'Escape' && map.replaying) stopReplay();
+});
+
+// ---------- settings (hosted)
+const dlgS = $('#dlg-settings'), sform = $('#settings-form');
+function openSettings() {
+  sform.reset(); $('#set-err').textContent = '';
+  $('#set-where').innerHTML = `Encrypted log: <a href="https://github.com/${where.owner}/${where.repo}/commits/HEAD/${VAULT_FILE}" target="_blank" rel="noopener">${where.owner}/${where.repo}/${VAULT_FILE}</a>. Every save is a commit, so earlier versions can always be recovered. GitHub token: ${sync.token ? 'set' : '<b>missing</b> (saving is off)'}.`;
+  dlgS.showModal();
+}
+sform.addEventListener('submit', async e => {
+  if (e.submitter?.value !== 'save') return;
+  e.preventDefault();
+  const err = $('#set-err'), pw = $('#set-pass').value, token = $('#set-token').value.trim();
+  err.textContent = '';
+  try {
+    if (pw) {
+      if (pw !== $('#set-pass2').value) throw new Error("Passwords don't match.");
+      if (strengthOf(pw) < 0.45) throw new Error('Choose a stronger password.');
+    }
+    if (token) { const c = await gh.checkToken(token); if (!c.ok) throw new Error(c.reason); sync.token = token; }
+    if (pw) {
+      sync.session = await newSession(pw);
+      const key = await exportSession(sync.session);
+      sessionStorage.setItem(KEY, key);
+      if (localStorage.getItem(KEY)) localStorage.setItem(KEY, key);
+    }
+    if (pw || token) { save(); toast(pw ? 'Password changed. Other devices will ask for the new one.' : 'GitHub token updated'); }
+    dlgS.close();
+  } catch (ex) { err.textContent = ex.message; }
 });
 
 // ---------- flight dialog
@@ -738,7 +727,7 @@ function fillDatalists() {
 const apCode = v => {
   v = (v || '').trim();
   const m = v.toUpperCase().match(/^([A-Z0-9]{3,4})\b/);
-  if (m && (state.ap(m[1]) && !state.ap(m[1]).unknown)) return m[1];
+  if (m && state.ap(m[1]) && !state.ap(m[1]).unknown) return m[1];
   const hit = state.ap.all().find(a => a.city.toLowerCase() === v.toLowerCase() || a.label.toLowerCase() === v.toLowerCase());
   return hit ? hit.iata : m ? m[1] : v.toUpperCase();
 };
@@ -773,13 +762,13 @@ function openFlight(id, patch = null) {
 function updatePreview() {
   const from = apCode(form.from.value), to = apCode(form.to.value);
   const A = from && state.ap(from), B = to && state.ap(to);
-  $('#h-from').textContent = A ? (A.unknown ? 'Unknown airport. Add it under Places.' : `${A.label}, ${A.countryName}`) : '';
-  $('#h-to').textContent = B ? (B.unknown ? 'Unknown airport. Add it under Places.' : `${B.label}, ${B.countryName}`) : '';
+  $('#h-from').textContent = A ? (A.unknown ? 'Unknown airport: add it from the menu' : `${A.label}, ${A.countryName}`) : '';
+  $('#h-to').textContent = B ? (B.unknown ? 'Unknown airport: add it from the menu' : `${B.label}, ${B.countryName}`) : '';
   const bits = [];
   let tzDur = null;
   if (A && B && !A.unknown && !B.unknown) {
     const km = haversine(A, B);
-    bits.push(`Distance <b>${dist(km)}</b>`, `Typical block time <b>${dur(estimateDuration(km))}</b>`);
+    bits.push(`Distance <b>${dist(km)}</b>`, `Typical flight time <b>${dur(estimateDuration(km))}</b>`);
     if (form.date.value && form.depTime.value && form.arrTime.value) {
       tzDur = flightTimes({ date: form.date.value, depTime: form.depTime.value, arrTime: form.arrTime.value }, A, B).tzDur ?? null;
       if (tzDur != null) bits.push(`From times &amp; time zones <b>${dur(tzDur)}</b>`);
@@ -837,26 +826,30 @@ $('#f-delete').onclick = () => {
   commit(db => { db.flights = db.flights.filter(x => x.id !== f.id); }, `Deleted ${f.flightNumber || 'flight'} ${f.from}→${f.to}`);
 };
 
-// ---------- import dialog
+// ---------- import
+function parseImport(text, name) {
+  if (/\.json$/i.test(name) || text.trim().startsWith('{')) {
+    const j = JSON.parse(text);
+    if (!Array.isArray(j.flights)) throw new Error('JSON has no "flights" array');
+    const flights = j.flights.map(f => ({ ...f, id: f.id || newId() }));
+    return { flights, labels: j.airportLabels || {}, extra: { customAirports: j.customAirports || {}, dismissed: j.dismissed || [] },
+      asDb: { flights, airportLabels: j.airportLabels || {}, customAirports: j.customAirports || {}, dismissed: j.dismissed || [] } };
+  }
+  const { flights, airportsSeen } = fromFR24CSV(text);
+  return { flights, labels: airportsSeen, extra: {}, asDb: { flights, airportLabels: airportsSeen } };
+}
 const dlgI = $('#dlg-import');
 let pending = null;
 function openImport() { pending = null; $('#import-summary').classList.add('hidden'); $('#import-go').disabled = true; $('#import-file').value = ''; dlgI.showModal(); }
 async function readImport(file) {
-  const text = await file.text();
   const sum = $('#import-summary'); sum.classList.remove('hidden');
   try {
-    let flights, labels = {}, extra = {};
-    if (/\.json$/i.test(file.name) || text.trim().startsWith('{')) {
-      const j = JSON.parse(text);
-      if (!Array.isArray(j.flights)) throw new Error('JSON has no "flights" array');
-      flights = j.flights.map(f => ({ ...f, id: f.id || newId() })); labels = j.airportLabels || {};
-      extra = { customAirports: j.customAirports || {}, dismissed: j.dismissed || [] };
-    } else ({ flights, airportsSeen: labels } = fromFR24CSV(text));
+    const p = parseImport(await file.text(), file.name);
     const have = new Set(state.db.flights.map(flightKey));
-    const fresh = flights.filter(f => !have.has(flightKey(f)));
-    const unknown = [...new Set(flights.flatMap(f => [f.from, f.to]))].filter(c => state.ap(c).unknown && !extra.customAirports?.[c]);
-    pending = { flights, fresh, labels, extra };
-    sum.innerHTML = `<b>${file.name}</b>: ${plural(flights.length, 'flight')} found. <b>${fresh.length}</b> new, ${flights.length - fresh.length} already in your log.
+    p.fresh = p.flights.filter(f => !have.has(flightKey(f)));
+    const unknown = [...new Set(p.flights.flatMap(f => [f.from, f.to]))].filter(c => state.ap(c).unknown && !p.extra.customAirports?.[c]);
+    pending = p;
+    sum.innerHTML = `<b>${esc(file.name)}</b>: ${plural(p.flights.length, 'flight')} found. <b>${p.fresh.length}</b> new, ${p.flights.length - p.fresh.length} already in your log.
       ${unknown.length ? `<br>⚠ Airports without coordinates: ${unknown.join(', ')}. You can add them after importing.` : ''}`;
     $('#import-go').disabled = false;
   } catch (e) { sum.innerHTML = `<span style="color:var(--critical)">Couldn't read this file: ${esc(e.message)}</span>`; }
@@ -879,19 +872,18 @@ $('#import-form').addEventListener('submit', e => {
   }, mode === 'replace' ? `Replaced log with ${p.flights.length} flights` : `Imported ${p.fresh.length} new flights`);
 });
 
-// ---------- airport dialog
+// ---------- custom airport dialog
 const dlgA = $('#dlg-airport'), aform = $('#airport-form');
 aform.country.innerHTML = '<option value="">—</option>' + Object.entries(COUNTRIES).sort((a, b) => a[1][0].localeCompare(b[1][0])).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('');
 try { $('#dl-tz').innerHTML = Intl.supportedValuesOf('timeZone').map(z => `<option value="${z}">`).join(''); } catch { /* older browser */ }
 function openAirport(code) {
   const a = code ? state.ap(code) : null;
-  const custom = code && state.db.customAirports?.[code];
   aform.reset();
   if (a) {
     aform.iata.value = a.iata; aform.icao.value = a.icao || ''; aform.city.value = a.city || ''; aform.name.value = a.name || '';
     aform.country.value = a.country || ''; aform.lat.value = a.unknown ? '' : a.lat; aform.lon.value = a.unknown ? '' : a.lon; aform.tz.value = a.tz || '';
   }
-  $('#a-delete').classList.toggle('hidden', !custom);
+  $('#a-delete').classList.toggle('hidden', !(code && state.db.customAirports?.[code]));
   dlgA.showModal();
 }
 aform.addEventListener('submit', e => {
@@ -910,32 +902,16 @@ $('#a-delete').onclick = () => {
 };
 
 // ---------- boot
-async function boot() {
-  $('#btn-units').textContent = state.units;
-  const tb = $('#topbar');
-  new ResizeObserver(() => document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px')).observe(tb);
-  applyTheme();
-  let db = null;
-  try { db = JSON.parse(localStorage.getItem(DB_KEY)); } catch { /* storage blocked */ }
-  const firstRun = !db;
-  state.db = db || structuredClone(globalThis.SKYLOG_SEED || { flights: [], customAirports: {}, airportLabels: {} });
-  if (firstRun) save(); else setSave('Saved');
-  renderBackup();
+function start() {
   recompute();
   map.setMode(state.mapMode);
-  // Reattach the backup file (if one was set up) without holding up the first render.
-  if (!fsSupported) return;
-  try {
-    const handle = await Promise.race([kvGet('backup'), new Promise(r => setTimeout(r, 3000))]);
-    if (!handle) return;
-    backup.handle = handle;
-    backup.state = await handle.queryPermission({ mode: 'readwrite' }) === 'granted' ? 'on' : 'reconnect';
-    // Browser data was cleared but the backup file survived: restore from it.
-    if (firstRun && backup.state === 'on') {
-      const file = await readBackup().catch(() => null);
-      if (file) { state.db = file; save(); recompute(); toast(`Restored your logbook from ${handle.name}`); }
-    }
-    renderBackup();
-  } catch { /* IndexedDB unavailable */ }
+  go(state.page);
 }
-boot();
+if (hosted) bootHosted();
+else {
+  let db = null;
+  try { db = JSON.parse(localStorage.getItem('skylog.db')); } catch { /* storage blocked */ }
+  state.db = db || structuredClone(globalThis.SKYLOG_SEED || { flights: [], customAirports: {}, airportLabels: {} });
+  if (!db) save(); else setSync('Saved in this browser', 'ok');
+  start();
+}
