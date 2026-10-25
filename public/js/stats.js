@@ -228,6 +228,39 @@ export function journeys(list) {
   return out;
 }
 
+// ---------- delays
+// How far east (+1) or west (-1) a route runs; 0 for north-south routes. Jet streams make
+// eastbound flights noticeably faster than westbound ones of the same length.
+export function eastward(f) {
+  const dlon = ((f.B.lon - f.A.lon + 540) % 360) - 180;
+  const ew = dlon * Math.cos((f.A.lat + f.B.lat) / 2 * rad) * 111.32;
+  return Math.max(-1, Math.min(1, ew / f.dist));
+}
+
+// Typical gate-to-gate time, fitted to your own flights: minutes = a + km / (v + w·eastward) · 60.
+// The fit minimises absolute error, so occasional delays don't drag the "typical" time up.
+// Flights whose logged duration disagrees with their times + time zones are left out, because
+// it's unclear which number carries the delay.
+export function delayModel(flights) {
+  const durOf = f => f.duration ?? f.tzDur;
+  const consistent = f => !(f.duration != null && f.tzDur != null && Math.abs(f.duration - f.tzDur) > 20);
+  const eligible = f => f.dist >= 150 && !f.heli && durOf(f) != null && f.dist / (durOf(f) / 60) < 1000;
+  const usable = flights.filter(f => eligible(f) && consistent(f));
+  const skipped = flights.filter(f => eligible(f) && !consistent(f));
+  let best = { a: 40, v: 780, w: 80, err: Infinity };
+  if (usable.length >= 8) {
+    const pts = usable.map(f => [f.dist, eastward(f), durOf(f)]);
+    for (let a = 20; a <= 70; a += 2) for (let v = 650; v <= 950; v += 10) for (let w = 0; w <= 200; w += 10) {
+      let err = 0;
+      for (const [km, e, d] of pts) err += Math.abs(d - (a + km / (v + w * e) * 60));
+      if (err < best.err) best = { a, v, w, err };
+    }
+  }
+  const expected = f => Math.round(best.a + f.dist / (best.v + best.w * eastward(f)) * 60);
+  const rows = usable.map(f => ({ f, actual: durOf(f), expected: expected(f), delay: durOf(f) - expected(f) }));
+  return { ...best, rows, skipped, expected, threshold: 20 };
+}
+
 // ---------- achievements
 export function achievements(all, s) {
   const has = pred => all.filter(pred);

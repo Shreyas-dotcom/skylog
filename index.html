@@ -99,7 +99,7 @@ a { color: var(--link); text-decoration: none; }
 
 /* ---------- map */
 .mapwrap { position: relative; height: min(64vh, 680px); min-height: 380px; background: var(--water); overflow: hidden; }
-.mapwrap.globe { background: radial-gradient(ellipse at center, #1b2430 0%, #0d1117 70%); }
+.mapwrap.globe { background: radial-gradient(ellipse at center, #34475e 0%, #1a2433 75%); }
 .map { position: absolute; inset: 0; touch-action: none; cursor: grab; }
 .map.dragging { cursor: grabbing; }
 .map svg { display: block; width: 100%; height: 100%; }
@@ -123,13 +123,13 @@ a { color: var(--link); text-decoration: none; }
 .map .replay-done { fill: none; stroke-width: 1.6; stroke-opacity: .85; }
 .map .plane { fill: #1e88e5; stroke: #fff; stroke-width: 1.5; paint-order: stroke; }
 /* Globe keeps its dark look */
-.globe .map .sphere { fill: #0f1419; }
-.globe .map .graticule { stroke: #34342f; stroke-width: .4; stroke-opacity: .6; }
-.globe .map .land { fill: #222220; stroke: #34342f; }
-.globe .map .land.visited { fill: #1d3555; }
+.globe .map .sphere { fill: #1f3b5c; }
+.globe .map .graticule { stroke: #4d6888; stroke-width: .4; stroke-opacity: .6; }
+.globe .map .land { fill: #4a5361; stroke: #6a7484; }
+.globe .map .land.visited { fill: #5a7fa8; }
 .globe .map .country-label { display: none; }
-.globe .map .ap-label { fill: #f0efec; stroke: #0f1419; }
-.globe .map .pin path { stroke: #0f1419; }
+.globe .map .ap-label { fill: #fff; stroke: #1f3b5c; }
+.globe .map .pin path { stroke: #1f3b5c; }
 
 .map-ctrl { position: absolute; right: 14px; top: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .seg { display: inline-flex; background: var(--white); border-radius: 6px; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); overflow: hidden; }
@@ -302,7 +302,7 @@ td.tail-cell { padding: 3px 4px 3px 12px; width: 44px; }
 .rec .v small { font-size: 15px; font-weight: 700; margin-left: 2px; }
 .rec .d { color: var(--ink-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .s-blue { --c: var(--blue-2); } .s-yellow { --c: var(--yellow-1); } .s-purple { --c: var(--purple-1); } .s-teal { --c: var(--teal-1); } .s-red { --c: var(--red-1); } .s-green { --c: var(--green-1); }
-.boards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.boards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
 .board .head { color: #fff; padding: 12px 16px; }
 .board .head h3 { margin: 0; font-size: 12px; font-weight: 900; letter-spacing: .05em; text-transform: uppercase; text-align: center; }
 .board .lb-row { display: grid; grid-template-columns: 22px 30px minmax(0, 1fr) minmax(60px, 34%) 78px; gap: 10px; align-items: center; padding: 6px 16px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 13px; }
@@ -314,6 +314,16 @@ td.tail-cell { padding: 3px 4px 3px 12px; width: 44px; }
 .board .track { height: 8px; background: #f0f1f3; border-radius: 2px; overflow: hidden; }
 .board .fill { height: 100%; width: 0; transition: width .6s cubic-bezier(.2, .8, .2, 1); border-radius: 2px; }
 .board .val { text-align: right; font-weight: 900; font-variant-numeric: tabular-nums; }
+.board .head.with-pills { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.board .head.with-pills h3 { text-align: left; }
+.board .head .pills { display: flex; gap: 4px; }
+.board .head .pill { background: rgba(255, 255, 255, .25); color: #fff; }
+.board .head .pill.on { background: #fff; color: var(--ink); }
+.board .note { padding: 10px 16px 12px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.board .lb-row.wide { grid-template-columns: 40px 30px minmax(0, 1fr) minmax(60px, 30%) 64px; }
+.board .lb-row.plane { grid-template-columns: 26px 30px minmax(0, .8fr) minmax(0, 1.4fr); }
+.board .dates { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boards > .board:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 /* ---------- data check */
 .issue { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); align-items: start; }
@@ -1235,6 +1245,39 @@ function journeys(list) {
   return out;
 }
 
+// ---------- delays
+// How far east (+1) or west (-1) a route runs; 0 for north-south routes. Jet streams make
+// eastbound flights noticeably faster than westbound ones of the same length.
+function eastward(f) {
+  const dlon = ((f.B.lon - f.A.lon + 540) % 360) - 180;
+  const ew = dlon * Math.cos((f.A.lat + f.B.lat) / 2 * rad) * 111.32;
+  return Math.max(-1, Math.min(1, ew / f.dist));
+}
+
+// Typical gate-to-gate time, fitted to your own flights: minutes = a + km / (v + w·eastward) · 60.
+// The fit minimises absolute error, so occasional delays don't drag the "typical" time up.
+// Flights whose logged duration disagrees with their times + time zones are left out, because
+// it's unclear which number carries the delay.
+function delayModel(flights) {
+  const durOf = f => f.duration ?? f.tzDur;
+  const consistent = f => !(f.duration != null && f.tzDur != null && Math.abs(f.duration - f.tzDur) > 20);
+  const eligible = f => f.dist >= 150 && !f.heli && durOf(f) != null && f.dist / (durOf(f) / 60) < 1000;
+  const usable = flights.filter(f => eligible(f) && consistent(f));
+  const skipped = flights.filter(f => eligible(f) && !consistent(f));
+  let best = { a: 40, v: 780, w: 80, err: Infinity };
+  if (usable.length >= 8) {
+    const pts = usable.map(f => [f.dist, eastward(f), durOf(f)]);
+    for (let a = 20; a <= 70; a += 2) for (let v = 650; v <= 950; v += 10) for (let w = 0; w <= 200; w += 10) {
+      let err = 0;
+      for (const [km, e, d] of pts) err += Math.abs(d - (a + km / (v + w * e) * 60));
+      if (err < best.err) best = { a, v, w, err };
+    }
+  }
+  const expected = f => Math.round(best.a + f.dist / (best.v + best.w * eastward(f)) * 60);
+  const rows = usable.map(f => ({ f, actual: durOf(f), expected: expected(f), delay: durOf(f) - expected(f) }));
+  return { ...best, rows, skipped, expected, threshold: 20 };
+}
+
 // ---------- achievements
 function achievements(all, s) {
   const has = pred => all.filter(pred);
@@ -1797,7 +1840,7 @@ const state = {
   db: null, all: [], ap: null, issues: [], issueBy: new Map(),
   filter: { year: null, airport: null, airline: null, route: null, aircraft: null, q: '' },
   page: store.get('page', 'profile'), units: store.get('units', 'km'), mapMode: store.get('mapMode', 'flat'),
-  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all',
+  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all', delaySort: store.get('delaySort', 'total'),
 };
 
 const n0 = n => Math.round(n).toLocaleString();
@@ -2027,6 +2070,7 @@ function recompute() {
   const today = new Date().toLocaleDateString('en-CA');
   for (const f of state.all) f.upcoming = f.date > today;
   state.past = state.all.filter(f => !f.upcoming);
+  state.delayModel = null; // refitted lazily by the Records page
   state.upcoming = state.all.filter(f => f.upcoming);
   const dismissed = new Set(state.db.dismissed);
   state.issues = healthCheck(state.all).map(i => ({ ...i, dismissed: dismissed.has(i.id) }));
@@ -2440,6 +2484,48 @@ function renderRecords(list, s) {
     `<option value="${a.code}" ${a.code === fromAp?.code ? 'selected' : ''}>${a.code} · ${esc(a.a.city)}</option>`).join('')}</select>`;
   const north = maxBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
   const south = minBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
+  const durTxt = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
+
+  // Delays: logged time vs. the typical time for that distance and direction, fitted to all
+  // your flights (see delayModel), shown for the selected period.
+  const dm = state.delayModel ||= delayModel(state.past);
+  const inList = new Set(list.map(f => f.id));
+  const dRows = dm.rows.filter(r => inList.has(r.f.id));
+  const worst = dRows.length ? maxBy(dRows, r => r.delay) : null;
+  const lateRows = dRows.filter(r => r.delay >= dm.threshold);
+
+  // Connections: consecutive flights through the same city less than 15 h apart (longer than that
+  // counts as visiting). A flight continuing under the same number isn't a connection.
+  const conns = [];
+  for (let i = 1; i < list.length; i++) {
+    const a = list[i - 1], b = list[i];
+    if (a.depUtc == null || b.depUtc == null || a.B.metro !== b.A.metro || (a.flightNumber && a.flightNumber === b.flightNumber)) continue;
+    const gap = Math.round((b.depUtc - a.arrUtc) / 60000);
+    if (gap > 0 && gap < 15 * 60) conns.push({ a, b, gap });
+  }
+  const tightest = conns.length ? minBy(conns, c => c.gap) : null, longestLay = conns.length ? maxBy(conns, c => c.gap) : null;
+  const connText = c => `at ${c.a.to === c.b.from ? c.a.to : `${c.a.to} → ${c.b.from}`} · ${esc(fname(c.a))} then ${esc(fname(c.b))} · ${date(c.b.date)}`;
+
+  // On this day (all years, whatever the filter), or the next anniversary coming up.
+  const now = new Date(), todayMD = now.toLocaleDateString('en-CA').slice(5);
+  const todayLabel = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const thisDay = state.past.filter(f => f.date.slice(5) === todayMD);
+  const daysTo = f => {
+    for (const y of [now.getFullYear(), now.getFullYear() + 1]) {
+      const t = new Date(`${y}-${f.date.slice(5)}T00:00:00`);
+      if (!isNaN(t) && t > now) return Math.ceil((t - now) / 864e5);
+    }
+    return 999;
+  };
+  const nextAnniv = !thisDay.length && state.past.length ? minBy(state.past, daysTo) : null;
+  const yearsAgo = f => now.getFullYear() - f.year;
+
+  // Earliest wake-up and latest departure (anything before 04:00 counts as the night before).
+  const depMin = f => { const [h, m] = f.depTime.split(':').map(Number); return h * 60 + m; };
+  const timedDep = list.filter(f => f.depHour != null);
+  const earlyPool = timedDep.filter(f => depMin(f) >= 240);
+  const earliest = earlyPool.length ? minBy(earlyPool, depMin) : null;
+  const latest = timedDep.length ? maxBy(timedDep, f => depMin(f) < 240 ? depMin(f) + 1440 : depMin(f)) : null;
 
   const sections = [
     ['Distance & time', 's-blue', [
@@ -2460,7 +2546,20 @@ function renderRecords(list, s) {
       seatTop && { k: 'Favorite seat', v: SEAT_TYPES[seatTop[0]], d: `${pct(seatTop[1], s.count)}% of flights (${seatTop[1]})` },
       topCountry && { k: 'Most visited country', v: esc(topCountry.name), d: `${plural(topCountry.count, 'visit')} · ${plural(topCountry.airports.size, 'airport')}` },
     ]],
+    ['Delays & connections', 's-red', [
+      worst && worst.delay >= dm.threshold && { k: 'Biggest delay', f: worst.f, logo: flightLogo(worst.f, 'lg'), v: `+${durTxt(worst.delay)}`,
+        d: `${esc(fname(worst.f))} ${worst.f.from} → ${worst.f.to} · ${durTxt(worst.actual)} vs ~${durTxt(worst.expected)} typical` },
+      dRows.length && { k: 'On-time record', v: `${pct(dRows.length - lateRows.length, dRows.length)}%<small>on time</small>`,
+        d: `${lateRows.length} of ${dRows.length} flights ran ${dm.threshold}+ min long` },
+      tightest && { k: 'Shortest connection', f: tightest.b, logo: flightLogo(tightest.b, 'lg'), v: durTxt(tightest.gap), d: connText(tightest) },
+      longestLay && longestLay !== tightest && { k: 'Longest layover', f: longestLay.b, logo: flightLogo(longestLay.b, 'lg'), v: durTxt(longestLay.gap), d: connText(longestLay) },
+    ]],
     ['Calendar', 's-purple', [
+      thisDay.length ? { k: `On this day · ${todayLabel}`, f: thisDay[0], logo: flightLogo(thisDay[0], 'lg'), v: plural(thisDay.length, 'flight'),
+        d: thisDay.map(f => `${yearsAgo(f)} yr${yearsAgo(f) === 1 ? '' : 's'} ago: ${esc(fname(f))} ${f.from} → ${f.to}`).join(' · ') }
+        : nextAnniv && { k: `On this day · ${todayLabel}`, f: nextAnniv, v: 'No flights', d: `Next in ${plural(daysTo(nextAnniv), 'day')}: ${date(nextAnniv.date)} · ${esc(fname(nextAnniv))} ${nextAnniv.from} → ${nextAnniv.to}` },
+      earliest && { k: 'Earliest departure', f: earliest, logo: flightLogo(earliest, 'lg'), v: earliest.depTime, d: route(earliest) },
+      latest && { k: 'Latest departure', f: latest, logo: flightLogo(latest, 'lg'), v: latest.depTime, d: route(latest) },
       yrs[0] && !state.filter.year && { k: 'Busiest year', v: yrs[0].year, d: `${plural(yrs[0].count, 'flight')} · ${dist(yrs[0].km)}`, act: `data-act="year-pick" data-v="${yrs[0].year}"` },
       ym && { k: 'Busiest month', v: `${MONTHS[+ym[0].split('-')[1]]} ${ym[0].split('-')[0]}`, d: plural(ym[1], 'flight') },
       busiestDay && busiestDay[1].length > 1 && { k: 'Most flights in a day', v: `${busiestDay[1].length}<small>flights</small>`, f: busiestDay[1][0],
@@ -2492,10 +2591,58 @@ function renderRecords(list, s) {
         <span class="track"><span class="fill" data-w="${val(f) / max * 100}" style="display:block;background:var(--${color}-1)"></span></span>
         <span class="val">${fmt(f)}</span></div>`).join('')}</div>`;
   };
+  // Delays by airline, sortable by total delay, average per flight, or number of delays.
+  const delayBoard = () => {
+    const agg = new Map();
+    for (const r of dRows) {
+      const k = r.f.airline || 'Unknown airline';
+      const x = agg.get(k) || { name: k, iata: r.f.airlineIata, n: 0, late: 0, total: 0, worst: 0 };
+      x.n++;
+      if (r.delay >= dm.threshold) { x.late++; x.total += r.delay; x.worst = Math.max(x.worst, r.delay); }
+      agg.set(k, x);
+    }
+    const sk = state.delaySort, val = x => sk === 'average' ? x.total / x.n : sk === 'count' ? x.late : x.total;
+    const rows = [...agg.values()].filter(x => x.late).sort((a, b) => val(b) - val(a) || b.n - a.n);
+    const max = rows.length ? val(rows[0]) : 1;
+    const shown = sk === 'count' ? x => `${x.late}×` : sk === 'average' ? x => `${Math.round(x.total / x.n)} min` : x => durTxt(x.total);
+    const never = [...agg.values()].filter(x => !x.late && x.n > 1).map(x => esc(x.name));
+    return `<div class="card board"><div class="head with-pills" style="background:linear-gradient(180deg,var(--red-1),var(--red-2))"><h3>Delays by airline</h3>
+        <div class="pills">${[['total', 'Total'], ['average', 'Per flight'], ['count', 'Count']].map(([k, l]) => `<button class="pill ${sk === k ? 'on' : ''}" data-act="delay-sort" data-v="${k}">${l}</button>`).join('')}</div></div>
+      ${rows.map((x, i) => `<div class="lb-row" data-act="rec-filter" data-k="airline" data-v="${esc(x.name)}"><span class="rank">${i + 1}</span>${airlineLogo(x.name, x.iata)}
+        <span class="who"><b>${esc(x.name)}</b> <span class="muted">${x.late} of ${plural(x.n, 'flight')} · worst +${durTxt(x.worst)}</span></span>
+        <span class="track"><span class="fill" data-w="${val(x) / max * 100}" style="display:block;background:var(--red-1)"></span></span>
+        <span class="val">${shown(x)}</span></div>`).join('') || '<div class="note">No delays over 20 minutes in this period.</div>'}
+      <div class="note">Delay = time beyond the typical time for that distance and direction, fitted to your own flights (${dm.threshold} min grace).
+        ${never.length ? `Never delayed: ${never.join(', ')}.` : ''} ${dm.skipped.length ? `${plural(dm.skipped.length, 'flight')} skipped because their times and duration disagree (see Data check).` : ''}</div></div>`;
+  };
+  const alYear = new Map();
+  for (const f of list) if (f.airline) {
+    const y = alYear.get(f.year) || { total: 0, al: new Map() };
+    y.total++;
+    const x = y.al.get(f.airline) || { name: f.airline, iata: f.airlineIata, n: 0 };
+    x.n++; y.al.set(f.airline, x); alYear.set(f.year, y);
+  }
+  const yearBoard = `<div class="card board"><div class="head" style="background:linear-gradient(180deg,var(--yellow-1),var(--yellow-2))"><h3>Airline of the year</h3></div>
+    ${[...alYear.entries()].sort((a, b) => b[0] - a[0]).map(([y, v]) => {
+      const top = [...v.al.values()].sort((a, b) => b.n - a.n)[0];
+      return `<div class="lb-row wide" data-act="rec-filter" data-k="airline" data-v="${esc(top.name)}"><span class="rank">${y}</span>${airlineLogo(top.name, top.iata)}
+        <span class="who"><b>${esc(top.name)}</b></span>
+        <span class="track"><span class="fill" data-w="${top.n / v.total * 100}" style="display:block;background:var(--yellow-1)"></span></span>
+        <span class="val">${top.n}/${v.total}</span></div>`;
+    }).join('')}</div>`;
+  const repeats = [...list.reduce((m, f) => f.registration ? m.set(f.registration, [...(m.get(f.registration) || []), f]) : m, new Map()).entries()]
+    .filter(([, fs]) => fs.length > 1).sort((a, b) => b[1].length - a[1].length || b[1].at(-1).sortTime - a[1].at(-1).sortTime);
+  const planeBoard = `<div class="card board"><div class="head" style="background:linear-gradient(180deg,var(--teal-1),var(--teal-2))"><h3>Same plane, more than once</h3></div>
+    ${repeats.map(([reg, fs]) => `<div class="lb-row plane" data-act="edit" data-id="${fs[0].id}"><span class="rank">${fs.length}×</span>${flightLogo(fs[0])}
+      <span class="who"><b class="mono">${esc(reg)}</b> <span class="muted">${esc(fs[0].aircraft || '')}</span></span>
+      <span class="dates">${fs.map(f => `${date(f.date)} ${f.from}→${f.to}`).join(' · ')}</span></div>`).join('')
+      || '<div class="note">No repeats yet. Add tail numbers (registrations) to your flights to find them.</div>'}</div>`;
+
   page.innerHTML = bar + sections.map(([title, cls, recs]) => {
     const items = recs.filter(r => r && r.v != null && r.v !== '');
     return items.length ? `<div class="rec-section ${cls}"><div class="section-h">${title}</div><div class="rec-grid">${items.map(card).join('')}</div></div>` : '';
   }).join('') + `<div class="section-h">Leaderboards</div><div class="boards">
+    ${delayBoard()}${yearBoard}${planeBoard}
     ${board('Longest flights', 'blue', flown, f => f.dist, f => dist(f.dist))}
     ${board('Longest time in the air', 'purple', timed, f => f.dur, f => dur(f.dur))}</div>`;
   renderYearSelect();
@@ -2555,6 +2702,7 @@ document.addEventListener('click', e => {
       el.classList.toggle('open');
       el.querySelectorAll('.ms-pop .ms-bar i').forEach(i => { i.style.width = i.dataset.w + '%'; });
       break;
+    case 'delay-sort': state.delaySort = v; store.set('delaySort', v); renderRecords(current.list, current.s); break;
     case 'rec-filter': state.filter[el.dataset.k] = v; go('flights'); break;
     case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;

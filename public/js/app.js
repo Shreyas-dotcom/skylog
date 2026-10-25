@@ -1,6 +1,6 @@
 import { createMap, FREQ, freqColor } from './map.js';
 import { fromFR24CSV, toFR24CSV, SEAT_TYPES, CLASSES, REASONS, flightKey, newId, parseAirline, parseAircraft } from './fr24.js';
-import { enrich, summarize, healthCheck, byCount, journeys, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI, HAULS, HAUL_RANGES } from './stats.js';
+import { enrich, summarize, healthCheck, byCount, journeys, delayModel, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI, HAULS, HAUL_RANGES } from './stats.js';
 import { COUNTRIES } from './airports.js';
 import { VAULT_FILE, newSession, seal, openVault, exportSession, importSession, detectRepo, githubStore } from './vault.js';
 
@@ -20,7 +20,7 @@ const state = {
   db: null, all: [], ap: null, issues: [], issueBy: new Map(),
   filter: { year: null, airport: null, airline: null, route: null, aircraft: null, q: '' },
   page: store.get('page', 'profile'), units: store.get('units', 'km'), mapMode: store.get('mapMode', 'flat'),
-  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all',
+  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all', delaySort: store.get('delaySort', 'total'),
 };
 
 const n0 = n => Math.round(n).toLocaleString();
@@ -250,6 +250,7 @@ function recompute() {
   const today = new Date().toLocaleDateString('en-CA');
   for (const f of state.all) f.upcoming = f.date > today;
   state.past = state.all.filter(f => !f.upcoming);
+  state.delayModel = null; // refitted lazily by the Records page
   state.upcoming = state.all.filter(f => f.upcoming);
   const dismissed = new Set(state.db.dismissed);
   state.issues = healthCheck(state.all).map(i => ({ ...i, dismissed: dismissed.has(i.id) }));
@@ -663,6 +664,48 @@ function renderRecords(list, s) {
     `<option value="${a.code}" ${a.code === fromAp?.code ? 'selected' : ''}>${a.code} · ${esc(a.a.city)}</option>`).join('')}</select>`;
   const north = maxBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
   const south = minBy([...s.airports.values()].filter(a => !a.a.unknown), a => a.a.lat);
+  const durTxt = m => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, '0')}m`;
+
+  // Delays: logged time vs. the typical time for that distance and direction, fitted to all
+  // your flights (see delayModel), shown for the selected period.
+  const dm = state.delayModel ||= delayModel(state.past);
+  const inList = new Set(list.map(f => f.id));
+  const dRows = dm.rows.filter(r => inList.has(r.f.id));
+  const worst = dRows.length ? maxBy(dRows, r => r.delay) : null;
+  const lateRows = dRows.filter(r => r.delay >= dm.threshold);
+
+  // Connections: consecutive flights through the same city less than 15 h apart (longer than that
+  // counts as visiting). A flight continuing under the same number isn't a connection.
+  const conns = [];
+  for (let i = 1; i < list.length; i++) {
+    const a = list[i - 1], b = list[i];
+    if (a.depUtc == null || b.depUtc == null || a.B.metro !== b.A.metro || (a.flightNumber && a.flightNumber === b.flightNumber)) continue;
+    const gap = Math.round((b.depUtc - a.arrUtc) / 60000);
+    if (gap > 0 && gap < 15 * 60) conns.push({ a, b, gap });
+  }
+  const tightest = conns.length ? minBy(conns, c => c.gap) : null, longestLay = conns.length ? maxBy(conns, c => c.gap) : null;
+  const connText = c => `at ${c.a.to === c.b.from ? c.a.to : `${c.a.to} → ${c.b.from}`} · ${esc(fname(c.a))} then ${esc(fname(c.b))} · ${date(c.b.date)}`;
+
+  // On this day (all years, whatever the filter), or the next anniversary coming up.
+  const now = new Date(), todayMD = now.toLocaleDateString('en-CA').slice(5);
+  const todayLabel = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const thisDay = state.past.filter(f => f.date.slice(5) === todayMD);
+  const daysTo = f => {
+    for (const y of [now.getFullYear(), now.getFullYear() + 1]) {
+      const t = new Date(`${y}-${f.date.slice(5)}T00:00:00`);
+      if (!isNaN(t) && t > now) return Math.ceil((t - now) / 864e5);
+    }
+    return 999;
+  };
+  const nextAnniv = !thisDay.length && state.past.length ? minBy(state.past, daysTo) : null;
+  const yearsAgo = f => now.getFullYear() - f.year;
+
+  // Earliest wake-up and latest departure (anything before 04:00 counts as the night before).
+  const depMin = f => { const [h, m] = f.depTime.split(':').map(Number); return h * 60 + m; };
+  const timedDep = list.filter(f => f.depHour != null);
+  const earlyPool = timedDep.filter(f => depMin(f) >= 240);
+  const earliest = earlyPool.length ? minBy(earlyPool, depMin) : null;
+  const latest = timedDep.length ? maxBy(timedDep, f => depMin(f) < 240 ? depMin(f) + 1440 : depMin(f)) : null;
 
   const sections = [
     ['Distance & time', 's-blue', [
@@ -683,7 +726,20 @@ function renderRecords(list, s) {
       seatTop && { k: 'Favorite seat', v: SEAT_TYPES[seatTop[0]], d: `${pct(seatTop[1], s.count)}% of flights (${seatTop[1]})` },
       topCountry && { k: 'Most visited country', v: esc(topCountry.name), d: `${plural(topCountry.count, 'visit')} · ${plural(topCountry.airports.size, 'airport')}` },
     ]],
+    ['Delays & connections', 's-red', [
+      worst && worst.delay >= dm.threshold && { k: 'Biggest delay', f: worst.f, logo: flightLogo(worst.f, 'lg'), v: `+${durTxt(worst.delay)}`,
+        d: `${esc(fname(worst.f))} ${worst.f.from} → ${worst.f.to} · ${durTxt(worst.actual)} vs ~${durTxt(worst.expected)} typical` },
+      dRows.length && { k: 'On-time record', v: `${pct(dRows.length - lateRows.length, dRows.length)}%<small>on time</small>`,
+        d: `${lateRows.length} of ${dRows.length} flights ran ${dm.threshold}+ min long` },
+      tightest && { k: 'Shortest connection', f: tightest.b, logo: flightLogo(tightest.b, 'lg'), v: durTxt(tightest.gap), d: connText(tightest) },
+      longestLay && longestLay !== tightest && { k: 'Longest layover', f: longestLay.b, logo: flightLogo(longestLay.b, 'lg'), v: durTxt(longestLay.gap), d: connText(longestLay) },
+    ]],
     ['Calendar', 's-purple', [
+      thisDay.length ? { k: `On this day · ${todayLabel}`, f: thisDay[0], logo: flightLogo(thisDay[0], 'lg'), v: plural(thisDay.length, 'flight'),
+        d: thisDay.map(f => `${yearsAgo(f)} yr${yearsAgo(f) === 1 ? '' : 's'} ago: ${esc(fname(f))} ${f.from} → ${f.to}`).join(' · ') }
+        : nextAnniv && { k: `On this day · ${todayLabel}`, f: nextAnniv, v: 'No flights', d: `Next in ${plural(daysTo(nextAnniv), 'day')}: ${date(nextAnniv.date)} · ${esc(fname(nextAnniv))} ${nextAnniv.from} → ${nextAnniv.to}` },
+      earliest && { k: 'Earliest departure', f: earliest, logo: flightLogo(earliest, 'lg'), v: earliest.depTime, d: route(earliest) },
+      latest && { k: 'Latest departure', f: latest, logo: flightLogo(latest, 'lg'), v: latest.depTime, d: route(latest) },
       yrs[0] && !state.filter.year && { k: 'Busiest year', v: yrs[0].year, d: `${plural(yrs[0].count, 'flight')} · ${dist(yrs[0].km)}`, act: `data-act="year-pick" data-v="${yrs[0].year}"` },
       ym && { k: 'Busiest month', v: `${MONTHS[+ym[0].split('-')[1]]} ${ym[0].split('-')[0]}`, d: plural(ym[1], 'flight') },
       busiestDay && busiestDay[1].length > 1 && { k: 'Most flights in a day', v: `${busiestDay[1].length}<small>flights</small>`, f: busiestDay[1][0],
@@ -715,10 +771,58 @@ function renderRecords(list, s) {
         <span class="track"><span class="fill" data-w="${val(f) / max * 100}" style="display:block;background:var(--${color}-1)"></span></span>
         <span class="val">${fmt(f)}</span></div>`).join('')}</div>`;
   };
+  // Delays by airline, sortable by total delay, average per flight, or number of delays.
+  const delayBoard = () => {
+    const agg = new Map();
+    for (const r of dRows) {
+      const k = r.f.airline || 'Unknown airline';
+      const x = agg.get(k) || { name: k, iata: r.f.airlineIata, n: 0, late: 0, total: 0, worst: 0 };
+      x.n++;
+      if (r.delay >= dm.threshold) { x.late++; x.total += r.delay; x.worst = Math.max(x.worst, r.delay); }
+      agg.set(k, x);
+    }
+    const sk = state.delaySort, val = x => sk === 'average' ? x.total / x.n : sk === 'count' ? x.late : x.total;
+    const rows = [...agg.values()].filter(x => x.late).sort((a, b) => val(b) - val(a) || b.n - a.n);
+    const max = rows.length ? val(rows[0]) : 1;
+    const shown = sk === 'count' ? x => `${x.late}×` : sk === 'average' ? x => `${Math.round(x.total / x.n)} min` : x => durTxt(x.total);
+    const never = [...agg.values()].filter(x => !x.late && x.n > 1).map(x => esc(x.name));
+    return `<div class="card board"><div class="head with-pills" style="background:linear-gradient(180deg,var(--red-1),var(--red-2))"><h3>Delays by airline</h3>
+        <div class="pills">${[['total', 'Total'], ['average', 'Per flight'], ['count', 'Count']].map(([k, l]) => `<button class="pill ${sk === k ? 'on' : ''}" data-act="delay-sort" data-v="${k}">${l}</button>`).join('')}</div></div>
+      ${rows.map((x, i) => `<div class="lb-row" data-act="rec-filter" data-k="airline" data-v="${esc(x.name)}"><span class="rank">${i + 1}</span>${airlineLogo(x.name, x.iata)}
+        <span class="who"><b>${esc(x.name)}</b> <span class="muted">${x.late} of ${plural(x.n, 'flight')} · worst +${durTxt(x.worst)}</span></span>
+        <span class="track"><span class="fill" data-w="${val(x) / max * 100}" style="display:block;background:var(--red-1)"></span></span>
+        <span class="val">${shown(x)}</span></div>`).join('') || '<div class="note">No delays over 20 minutes in this period.</div>'}
+      <div class="note">Delay = time beyond the typical time for that distance and direction, fitted to your own flights (${dm.threshold} min grace).
+        ${never.length ? `Never delayed: ${never.join(', ')}.` : ''} ${dm.skipped.length ? `${plural(dm.skipped.length, 'flight')} skipped because their times and duration disagree (see Data check).` : ''}</div></div>`;
+  };
+  const alYear = new Map();
+  for (const f of list) if (f.airline) {
+    const y = alYear.get(f.year) || { total: 0, al: new Map() };
+    y.total++;
+    const x = y.al.get(f.airline) || { name: f.airline, iata: f.airlineIata, n: 0 };
+    x.n++; y.al.set(f.airline, x); alYear.set(f.year, y);
+  }
+  const yearBoard = `<div class="card board"><div class="head" style="background:linear-gradient(180deg,var(--yellow-1),var(--yellow-2))"><h3>Airline of the year</h3></div>
+    ${[...alYear.entries()].sort((a, b) => b[0] - a[0]).map(([y, v]) => {
+      const top = [...v.al.values()].sort((a, b) => b.n - a.n)[0];
+      return `<div class="lb-row wide" data-act="rec-filter" data-k="airline" data-v="${esc(top.name)}"><span class="rank">${y}</span>${airlineLogo(top.name, top.iata)}
+        <span class="who"><b>${esc(top.name)}</b></span>
+        <span class="track"><span class="fill" data-w="${top.n / v.total * 100}" style="display:block;background:var(--yellow-1)"></span></span>
+        <span class="val">${top.n}/${v.total}</span></div>`;
+    }).join('')}</div>`;
+  const repeats = [...list.reduce((m, f) => f.registration ? m.set(f.registration, [...(m.get(f.registration) || []), f]) : m, new Map()).entries()]
+    .filter(([, fs]) => fs.length > 1).sort((a, b) => b[1].length - a[1].length || b[1].at(-1).sortTime - a[1].at(-1).sortTime);
+  const planeBoard = `<div class="card board"><div class="head" style="background:linear-gradient(180deg,var(--teal-1),var(--teal-2))"><h3>Same plane, more than once</h3></div>
+    ${repeats.map(([reg, fs]) => `<div class="lb-row plane" data-act="edit" data-id="${fs[0].id}"><span class="rank">${fs.length}×</span>${flightLogo(fs[0])}
+      <span class="who"><b class="mono">${esc(reg)}</b> <span class="muted">${esc(fs[0].aircraft || '')}</span></span>
+      <span class="dates">${fs.map(f => `${date(f.date)} ${f.from}→${f.to}`).join(' · ')}</span></div>`).join('')
+      || '<div class="note">No repeats yet. Add tail numbers (registrations) to your flights to find them.</div>'}</div>`;
+
   page.innerHTML = bar + sections.map(([title, cls, recs]) => {
     const items = recs.filter(r => r && r.v != null && r.v !== '');
     return items.length ? `<div class="rec-section ${cls}"><div class="section-h">${title}</div><div class="rec-grid">${items.map(card).join('')}</div></div>` : '';
   }).join('') + `<div class="section-h">Leaderboards</div><div class="boards">
+    ${delayBoard()}${yearBoard}${planeBoard}
     ${board('Longest flights', 'blue', flown, f => f.dist, f => dist(f.dist))}
     ${board('Longest time in the air', 'purple', timed, f => f.dur, f => dur(f.dur))}</div>`;
   renderYearSelect();
@@ -778,6 +882,7 @@ document.addEventListener('click', e => {
       el.classList.toggle('open');
       el.querySelectorAll('.ms-pop .ms-bar i').forEach(i => { i.style.width = i.dataset.w + '%'; });
       break;
+    case 'delay-sort': state.delaySort = v; store.set('delaySort', v); renderRecords(current.list, current.s); break;
     case 'rec-filter': state.filter[el.dataset.k] = v; go('flights'); break;
     case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;
