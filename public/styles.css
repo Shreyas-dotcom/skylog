@@ -95,7 +95,10 @@ a { color: var(--link); text-decoration: none; }
 .map .graticule { fill: none; stroke: none; }
 .map .land { fill: var(--land); stroke: var(--land-edge); stroke-width: .6; }
 .map .land.visited { fill: var(--visited); }
-.map .country-label { font: italic 600 10.5px var(--font); fill: var(--label); text-anchor: middle; pointer-events: none; letter-spacing: .02em; }
+.map .country-label { font: 700 9.5px var(--font); fill: #a59f90; text-anchor: middle; pointer-events: none; letter-spacing: .16em; text-transform: uppercase; }
+.map .city circle { fill: #fff; stroke: #5d5d5d; stroke-width: 1.3; }
+.map .city text { font: 600 10.5px var(--font); fill: #4a4a4a; paint-order: stroke; stroke: rgba(255, 255, 255, .9); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.map .city.visited text { font-weight: 900; font-size: 11.5px; fill: #1d1d1d; }
 .map .route { fill: none; stroke-linecap: round; pointer-events: none; }
 .map .route.upcoming { stroke: #1e88e5; stroke-width: 2.2; stroke-dasharray: 7 5; stroke-opacity: .95; }
 .globe .map .route.upcoming { stroke: #6db3ff; }
@@ -115,7 +118,7 @@ a { color: var(--link); text-decoration: none; }
 .globe .map .graticule { stroke: #4d6888; stroke-width: .4; stroke-opacity: .6; }
 .globe .map .land { fill: #4a5361; stroke: #6a7484; }
 .globe .map .land.visited { fill: #5a7fa8; }
-.globe .map .country-label { display: none; }
+.globe .map .country-label, .globe .map .city { display: none; }
 .globe .map .ap-label { fill: #fff; stroke: #1f3b5c; }
 .globe .map .pin path { stroke: #1f3b5c; }
 

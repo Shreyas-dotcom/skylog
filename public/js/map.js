@@ -25,12 +25,16 @@ export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
   const gHits = svg.append('g');
   const gReplay = svg.append('g');
   const gCountryLabels = svg.append('g');
+  const gCities = svg.append('g');
   const gAirports = svg.append('g');
   const gLabels = svg.append('g');
   const graticule = d3.geoGraticule10();
   const sphere = { type: 'Sphere' };
 
   let land = { lo: null, hi: null }, visited = new Set(), labelsFor = [];
+  // Key cities (Natural Earth): [name, lat, lon, minZoom, population in thousands], most prominent first.
+  const CITY_ROWS = (globalThis.SKYLOG_CITIES || []).map(([name, lat, lon, minZoom, pop]) => ({ name, lat, lon, minZoom, pop }));
+  let cities = CITY_ROWS;
   let data = { routes: [], airports: [], upcoming: [] };
   let mode = 'flat';
   let w = 800, h = 500, k = 1, rot = [0, 0], ty = 0, center = 0;
@@ -114,18 +118,6 @@ export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
       .on('mouseleave', () => { tooltip.hide(); setHighlight(null, true); })
       .on('click', (ev, r) => r.f ? onUpcoming?.(r.f) : onRoute?.(r));
 
-    // Country names (flat map only), largest countries first, skipping collisions.
-    const placed = [];
-    const cl = mode === 'globe' ? [] : labelsFor.filter(l => {
-      if (l.area < 0.004 / (k * k)) return false;
-      const p = projection(l.c); if (!p || p[0] < 0 || p[0] > w || p[1] < 0 || p[1] > h) return false;
-      const bw = l.name.length * 6.2, box = [p[0] - bw / 2, p[1] - 7, bw, 14];
-      if (placed.some(b => box[0] < b[0] + b[2] && box[0] + box[2] > b[0] && box[1] < b[1] + b[3] && box[1] + box[3] > b[1])) return false;
-      placed.push(box); return true;
-    });
-    gCountryLabels.selectAll('text').data(cl, l => l.name).join('text')
-      .attr('class', 'country-label').attr('transform', l => `translate(${projection(l.c)})`).text(l => l.name);
-
     // Airport pins: busier airports get slightly bigger pins; southern pins sit in front.
     const maxV = d3.max(data.airports, a => a.count) || 1;
     const size = a => 0.72 + 0.4 * Math.sqrt(a.count / maxV);
@@ -144,19 +136,57 @@ export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
       .on('mouseleave', () => tooltip.hide())
       .on('click', (ev, a) => onAirport?.(a))
       .order();
-    // Label the busiest airports first, skipping any label that would collide with one already placed.
-    const labelN = Math.round(8 + 8 * Math.min(k, 4)), boxes = [...placed], labeled = [];
+
+    // Labels are placed in priority order so nothing overlaps: airport codes, then cities, then countries.
+    const boxes = [];
+    const free = b => !boxes.some(o => b[0] < o[0] + o[2] && b[0] + b[2] > o[0] && b[1] < o[1] + o[3] && b[1] + b[3] > o[1]);
+    const inView = p => p && p[0] > 4 && p[0] < w - 4 && p[1] > 4 && p[1] < h - 4;
+    const labelN = Math.round(8 + 8 * Math.min(k, 4)), labeled = [];
     for (const a of aps) {
       if (labeled.length >= labelN) break;
       const p = projection([a.a.lon, a.a.lat]); if (!p) continue;
-      const x = p[0] + 7 * size(a), y = p[1] - 19 * size(a), bw = a.code.length * 7.5, bh = 12;
-      if (boxes.some(b => x < b[0] + b[2] && x + bw > b[0] && y < b[1] + b[3] && y + bh > b[1])) continue;
-      boxes.push([x, y, bw, bh]); labeled.push(a);
+      const box = [p[0] + 7 * size(a), p[1] - 19 * size(a), a.code.length * 7.5, 12];
+      if (free(box)) { boxes.push(box); labeled.push(a); }
     }
+    for (const a of aps) { const p = projection([a.a.lon, a.a.lat]); if (p) boxes.push([p[0] - 6, p[1] - 19, 12, 19]); } // pins themselves
     gLabels.selectAll('text').data(labeled, a => a.code).join('text')
       .attr('class', 'ap-label')
       .attr('transform', a => { const [x, y] = projection([a.a.lon, a.a.lat]); return `translate(${x + 7 * size(a)},${y - 9 * size(a)})`; })
       .text(a => a.code);
+
+    // Key cities (flat map): more appear as you zoom in; cities you've flown to come first, in bold.
+    const zoomLevel = 3 + Math.log2(k) * 1.2, placedCities = [];
+    if (mode !== 'globe') for (const c of cities) {
+      if (!c.visited && c.minZoom > zoomLevel) continue;
+      const p = projection([c.lon, c.lat]); if (!inView(p)) continue;
+      const bw = c.name.length * (c.visited ? 6.9 : 6.2), bh = 12, dot = c.visited ? null : [p[0] - 3, p[1] - 3, 6, 6];
+      if (dot && !free(dot)) continue;
+      // Try right, left, below, then above the dot.
+      const spots = [[6, -6, 'start'], [-6 - bw, -6, 'start'], [-bw / 2, 6, 'start'], [-bw / 2, -19, 'start']];
+      const spot = spots.find(([dx, dy]) => free([p[0] + dx, p[1] + dy, bw, bh]));
+      if (!spot) continue;
+      boxes.push([p[0] + spot[0], p[1] + spot[1], bw, bh]); if (dot) boxes.push(dot);
+      placedCities.push({ c, p, dx: spot[0], dy: spot[1] + 9.5 });
+      if (placedCities.length > 260) break;
+    }
+    gCities.selectAll('g.city').data(placedCities, d => d.c.name + d.c.lat).join(enter => {
+      const g = enter.append('g'); g.append('circle').attr('r', 2.4); g.append('text'); return g;
+    })
+      .attr('class', d => 'city' + (d.c.visited ? ' visited' : ''))
+      .attr('transform', d => `translate(${d.p})`)
+      .call(g => g.select('circle').attr('display', d => d.c.visited ? 'none' : null))
+      .call(g => g.select('text').attr('x', d => d.dx).attr('y', d => d.dy).text(d => d.c.name));
+
+    // Country names (flat map only), largest countries first, wherever there's still room.
+    const cl = mode === 'globe' ? [] : labelsFor.filter(l => {
+      if (l.area < 0.004 / (k * k)) return false;
+      const p = projection(l.c); if (!inView(p)) return false;
+      const bw = l.name.length * 7.6, box = [p[0] - bw / 2, p[1] - 7, bw, 14];
+      if (!free(box)) return false;
+      boxes.push(box); return true;
+    });
+    gCountryLabels.selectAll('text').data(cl, l => l.name).join('text')
+      .attr('class', 'country-label').attr('transform', l => `translate(${projection(l.c)})`).text(l => l.name);
 
     if (replayState) drawReplay();
     if (interacting) { clearTimeout(idleTimer); idleTimer = setTimeout(() => { interacting = false; render(); }, 160); }
@@ -259,6 +289,19 @@ export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
     update(next) {
       const changedRoutes = next.routes !== data.routes;
       data = next;
+      const mine = new Map();
+      for (const ap of next.airports || []) {
+        const a = ap.a;
+        let best = null, bestKm = 60;
+        for (const c of CITY_ROWS) {
+          if (Math.abs(c.lat - a.lat) > 1 || Math.abs(c.lon - a.lon) > 1.5) continue;
+          const km = d3.geoDistance([a.lon, a.lat], [c.lon, c.lat]) * 6371;
+          if (km < bestKm) { best = c; bestKm = km; }
+        }
+        const c = best || { name: a.city, lat: a.lat, lon: a.lon, minZoom: 99, pop: 0 };
+        mine.set(c.name + c.lat, { ...c, visited: true });
+      }
+      cities = [...mine.values(), ...CITY_ROWS.filter(c => !mine.has(c.name + c.lat))];
       visited = new Set(next.countries || []);
       if (changedRoutes) { center = bestCenter(next.routes); fit = null; ty = 0; }
       render();

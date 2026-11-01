@@ -24,7 +24,8 @@ const { flights, airportsSeen } = !clean && fs.existsSync(seedPath)
   ? fromFR24CSV(fs.readFileSync(seedPath, 'utf8')) : { flights: [], airportsSeen: {} };
 const seed = { version: 1, flights, customAirports: {}, airportLabels: airportsSeen, dismissed: [] };
 const data = `window.SKYLOG_ATLAS={lo:${read('vendor/countries-110m.json')},hi:${read('vendor/countries-50m.json')}};
-window.SKYLOG_SEED=${JSON.stringify(seed)};${test ? `
+window.SKYLOG_SEED=${JSON.stringify(seed)};
+window.SKYLOG_CITIES=${read('vendor/cities.json')};${test ? `
 window.SKYLOG_CONFIG={repo:'tester/skylog',api:'http://127.0.0.1:5199'};` : ''}`;
 
 const html = read('public/index.html')
