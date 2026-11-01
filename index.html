@@ -1508,7 +1508,7 @@ function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
 
     // Country names (flat map only), largest countries first, skipping collisions.
     const placed = [];
-    const cl = mode === 'globe' || lowres ? [] : labelsFor.filter(l => {
+    const cl = mode === 'globe' ? [] : labelsFor.filter(l => {
       if (l.area < 0.004 / (k * k)) return false;
       const p = projection(l.c); if (!p || p[0] < 0 || p[0] > w || p[1] < 0 || p[1] > h) return false;
       const bw = l.name.length * 6.2, box = [p[0] - bw / 2, p[1] - 7, bw, 14];
