@@ -1,7 +1,7 @@
 import { createMap, FREQ, freqColor } from './map.js';
 import { fromFR24CSV, toFR24CSV, SEAT_TYPES, CLASSES, REASONS, flightKey, newId, parseAirline, parseAircraft } from './fr24.js';
 import { enrich, summarize, healthCheck, byCount, journeys, delayModel, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI, HAULS, HAUL_RANGES } from './stats.js';
-import { COUNTRIES } from './airports.js';
+import { COUNTRIES, AIRLINES, findAirline } from './airports.js';
 import { VAULT_FILE, newSession, seal, openVault, exportSession, importSession, detectRepo, githubStore } from './vault.js';
 
 // ---------- small helpers
@@ -32,11 +32,13 @@ const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const fname = f => f.flightNumber || (f.heli ? 'Helicopter' : 'Flight');
 
 // Airline tail logos (the brand marks painted on tails), loaded by IATA code from Google Flights'
-// public image set, which itself serves a blank gray tail for airlines it doesn't know. Flights with
-// no airline code, or images that fail to load, get the same blank tail drawn locally.
+// public image set, which itself serves a blank gray tail for airlines it doesn't know. Google has no
+// lookup by name, so an airline saved without its code gets one from the built-in directory
+// (findAirline). Unknown airlines, or images that fail to load, get the same blank tail drawn locally.
 const LOGO_URL = code => `https://www.gstatic.com/flights/airline_logos/70px/${code}.png`;
 const BLANK_TAIL = '<svg class="blank" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21C10 19.5 13.5 13 15.2 3H20v18z" fill="#8e9094"/></svg>';
 function airlineLogo(name, iata, size = '') {
+  iata = iata || findAirline(name)?.iata || '';
   const img = iata ? `<img src="${LOGO_URL(iata)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add('nologo');this.remove()">` : '';
   return `<span class="tail ${size} ${iata ? '' : 'nologo'}" title="${esc(name || 'No airline')}">${img}${BLANK_TAIL}</span>`;
 }
@@ -1001,7 +1003,13 @@ function fillDatalists() {
   const all = state.ap.all().sort((a, b) => a.iata.localeCompare(b.iata));
   $('#dl-airports').innerHTML = all.map(a => `<option value="${a.iata}">${esc(a.label)}, ${esc(a.countryName)}</option>`).join('');
   const uniq = arr => [...new Set(arr.filter(Boolean))].sort();
-  $('#dl-airlines').innerHTML = uniq(state.db.flights.map(f => f.airline && `${f.airline} (${f.airlineIata}/${f.airlineIcao})`)).map(v => `<option value="${esc(v)}">`).join('');
+  // Airlines already in the log, then every airline in the built-in directory that isn't.
+  const logged = state.db.flights.filter(f => f.airline);
+  const seen = new Set(logged.map(f => f.airlineIata).filter(Boolean));
+  $('#dl-airlines').innerHTML = uniq([
+    ...logged.map(f => `${f.airline} (${f.airlineIata || ''}/${f.airlineIcao || ''})`),
+    ...AIRLINES.filter(a => !seen.has(a.iata)).map(a => `${a.name} (${a.iata}/${a.icao})`),
+  ]).map(v => `<option value="${esc(v)}">`).join('');
   $('#dl-aircraft').innerHTML = uniq(state.db.flights.map(f => f.aircraft && `${f.aircraft} (${f.aircraftCode})`)).map(v => `<option value="${esc(v)}">`).join('');
 }
 
@@ -1067,14 +1075,17 @@ form.addEventListener('input', updatePreview);
 
 function readForm() {
   const al = parseAirline(form.airline.value), ac = parseAircraft(form.aircraft.value);
-  const known = state.db.flights.find(f => f.airline && f.airline.toLowerCase() === al.name.toLowerCase());
+  const known = state.db.flights.find(f => f.airline && f.airline.toLowerCase() === al.name.toLowerCase())
+    || (al.iata && state.db.flights.find(f => f.airline && f.airlineIata === al.iata));
   const knownAc = state.db.flights.find(f => f.aircraft && f.aircraft.toLowerCase() === ac.name.toLowerCase());
   const d = parseDur(form.duration.value);
   return {
     date: form.date.value, flightNumber: form.flightNumber.value.trim().toUpperCase().replace(/\s+/g, ''),
     from: apCode(form.from.value), to: apCode(form.to.value), depTime: form.depTime.value, arrTime: form.arrTime.value,
     duration: Number.isNaN(d) ? null : d,
-    airline: al.name, airlineIata: al.iata || known?.airlineIata || '', airlineIcao: al.icao || known?.airlineIcao || '',
+    // Reuse the spelling already in the log for this airline, so stats don't split "SWISS" from "Swiss".
+    airline: (al.iata && known?.airlineIata === al.iata ? known.airline : al.name),
+    airlineIata: al.iata || known?.airlineIata || '', airlineIcao: al.icao || known?.airlineIcao || '',
     aircraft: ac.name, aircraftCode: ac.code || knownAc?.aircraftCode || '',
     registration: form.registration.value.trim().toUpperCase(), seat: form.seat.value.trim().toUpperCase(),
     seatType: +form.seatType.value, cls: +form.cls.value, reason: +form.reason.value, note: form.note.value.trim(),

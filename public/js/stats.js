@@ -1,6 +1,6 @@
 // Flight enrichment (distances, timezones), aggregate statistics, journeys,
 // achievements and data-health checks. Pure functions, no DOM.
-import { BUILTIN_AIRPORTS, COUNTRIES, ALLIANCES, HELICOPTER_CODES } from './airports.js';
+import { BUILTIN_AIRPORTS, COUNTRIES, ALLIANCES, HELICOPTER_CODES, findAirline } from './airports.js';
 import { flightKey } from './fr24.js';
 
 export const EARTH_KM = 40075, MOON_KM = 384400, KM_PER_MI = 1.609344;
@@ -104,7 +104,10 @@ export const HAUL_RANGES = { Short: '< 1,500 km', Medium: '1,500–4,000 km', Lo
 
 export function enrich(db) {
   const ap = makeAirportLookup(db);
-  const out = db.flights.map(f => {
+  const out = db.flights.map(f0 => {
+    // Flights saved without airline codes (typed as just "Qatar") get them from the airline directory.
+    const al = !f0.airlineIata && f0.airline ? findAirline(f0.airline) : null;
+    const f = al ? { ...f0, airlineIata: al.iata, airlineIcao: f0.airlineIcao || al.icao } : f0;
     const A = ap(f.from), B = ap(f.to);
     const geo = !A.unknown && !B.unknown;
     const dist = geo ? haversine(A, B) : null;
@@ -120,7 +123,7 @@ export function enrich(db) {
     for (let i = 1; i < lons.length; i++) if (Math.abs(lons[i] - lons[i - 1]) > 180) dateline = true;
     const d = new Date(f.date + 'T00:00:00Z');
     return {
-      ...f, f, A, B, dist, dur, durSource, tzDur: t.tzDur, depUtc: t.depUtc, arrUtc, sortTime, path,
+      ...f, f: f0, A, B, dist, dur, durSource, tzDur: t.tzDur, depUtc: t.depUtc, arrUtc, sortTime, path,
       year: +f.date.slice(0, 4), month: d.getUTCMonth(), dow: (d.getUTCDay() + 6) % 7,
       depHour: f.depTime && hasTimes(f) ? +f.depTime.slice(0, 2) : null,
       routeKey: [f.from, f.to].sort().join('–'),

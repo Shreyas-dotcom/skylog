@@ -243,3 +243,106 @@ export const ALLIANCES = {
 };
 
 export const HELICOPTER_CODES = new Set(['SH4', 'S76', 'EC35', 'EC30', 'B06', 'R44', 'R22', 'AS50', 'A109', 'B429', 'S92', 'EC45', 'H160']);
+
+// Airline directory: [IATA, ICAO, name, ...other names people type]. Lets a flight entered as just
+// "Qatar" or "swiss" (no codes) still get its IATA code, which is what the tail logo is looked up by.
+const AIRLINE_ROWS = [
+  // --- North America
+  ['AA', 'AAL', 'American Airlines', 'American'], ['DL', 'DAL', 'Delta Air Lines', 'Delta'], ['UA', 'UAL', 'United Airlines', 'United'],
+  ['WN', 'SWA', 'Southwest Airlines', 'Southwest'], ['AS', 'ASA', 'Alaska Airlines', 'Alaska'], ['B6', 'JBU', 'JetBlue', 'JetBlue Airways'],
+  ['NK', 'NKS', 'Spirit Airlines', 'Spirit'], ['F9', 'FFT', 'Frontier Airlines', 'Frontier'], ['HA', 'HAL', 'Hawaiian Airlines', 'Hawaiian'],
+  ['G4', 'AAY', 'Allegiant Air', 'Allegiant'], ['SY', 'SCX', 'Sun Country Airlines', 'Sun Country'], ['MX', 'MXY', 'Breeze Airways', 'Breeze'],
+  ['XP', 'VXP', 'Avelo Airlines', 'Avelo'], ['VX', 'VRD', 'Virgin America'], ['QX', 'QXE', 'Horizon Air'], ['OO', 'SKW', 'SkyWest Airlines', 'SkyWest'],
+  ['YX', 'RPA', 'Republic Airways'], ['9E', 'EDV', 'Endeavor Air'], ['MQ', 'ENY', 'Envoy Air'], ['YV', 'ASH', 'Mesa Airlines'],
+  ['OH', 'JIA', 'PSA Airlines'], ['PT', 'PDT', 'Piedmont Airlines'], ['C5', 'UCA', 'CommutAir'], ['ZW', 'AWI', 'Air Wisconsin'],
+  ['9K', 'KAP', 'Cape Air'], ['3M', 'SIL', 'Silver Airways'],
+  ['AC', 'ACA', 'Air Canada'], ['RV', 'ROU', 'Air Canada Rouge'], ['QK', 'JZA', 'Jazz', 'Air Canada Jazz'], ['WS', 'WJA', 'WestJet'],
+  ['PD', 'POE', 'Porter Airlines', 'Porter'], ['TS', 'TSC', 'Air Transat', 'Transat'], ['F8', 'FLE', 'Flair Airlines', 'Flair'],
+  ['AM', 'AMX', 'Aeroméxico'], ['Y4', 'VOI', 'Volaris'], ['VB', 'VIV', 'Viva Aerobus', 'VivaAerobus'],
+  // --- Central & South America, Caribbean
+  ['CM', 'CMP', 'Copa Airlines', 'Copa'], ['AV', 'AVA', 'Avianca'], ['LA', 'LAN', 'LATAM Airlines', 'LATAM', 'LAN'], ['JJ', 'TAM', 'LATAM Brasil', 'TAM'],
+  ['G3', 'GLO', 'GOL', 'Gol Linhas Aéreas'], ['AD', 'AZU', 'Azul', 'Azul Brazilian Airlines'], ['AR', 'ARG', 'Aerolíneas Argentinas'],
+  ['FO', 'FBZ', 'Flybondi'], ['H2', 'SKU', 'Sky Airline'], ['JA', 'JAT', 'JetSMART'], ['P5', 'RPB', 'Wingo'], ['DM', 'DWI', 'Arajet'],
+  ['BW', 'BWA', 'Caribbean Airlines'], ['UP', 'BHS', 'Bahamasair'],
+  // --- Europe
+  ['BA', 'BAW', 'British Airways'], ['VS', 'VIR', 'Virgin Atlantic'], ['U2', 'EZY', 'easyJet'], ['FR', 'RYR', 'Ryanair'], ['LS', 'EXS', 'Jet2', 'Jet2.com'],
+  ['BY', 'TOM', 'TUI Airways'], ['LM', 'LOG', 'Loganair'], ['GR', 'AUR', 'Aurigny'], ['EI', 'EIN', 'Aer Lingus'],
+  ['LH', 'DLH', 'Lufthansa'], ['LX', 'SWR', 'SWISS', 'Swiss International Air Lines', 'Swiss Air Lines', 'Swiss Air', 'Swissair'],
+  ['WK', 'EDW', 'Edelweiss Air', 'Edelweiss'], ['2L', 'OAW', 'Helvetic Airways'], ['OS', 'AUA', 'Austrian Airlines', 'Austrian'],
+  ['SN', 'BEL', 'Brussels Airlines'], ['EN', 'DLA', 'Air Dolomiti'], ['EW', 'EWG', 'Eurowings'], ['4Y', 'OCN', 'Discover Airlines'],
+  ['DE', 'CFG', 'Condor'], ['X3', 'TUI', 'TUIfly'], ['AF', 'AFR', 'Air France'], ['KL', 'KLM', 'KLM', 'KLM Royal Dutch Airlines'],
+  ['HV', 'TRA', 'Transavia'], ['TO', 'TVF', 'Transavia France'], ['XK', 'CCM', 'Air Corsica'], ['IB', 'IBE', 'Iberia'], ['I2', 'IBS', 'Iberia Express'],
+  ['VY', 'VLG', 'Vueling'], ['UX', 'AEA', 'Air Europa'], ['V7', 'VOE', 'Volotea'], ['NT', 'IBB', 'Binter Canarias', 'Binter'], ['YW', 'ANE', 'Air Nostrum'],
+  ['TP', 'TAP', 'TAP Air Portugal', 'TAP', 'TAP Portugal'], ['S4', 'RZO', 'Azores Airlines', 'SATA'], ['AZ', 'ITY', 'ITA Airways', 'ITA', 'Alitalia'],
+  ['NO', 'NOS', 'Neos'], ['SK', 'SAS', 'SAS', 'Scandinavian Airlines'], ['DY', 'NOZ', 'Norwegian', 'Norwegian Air Shuttle'], ['WF', 'WIF', 'Widerøe'],
+  ['AY', 'FIN', 'Finnair'], ['FI', 'ICE', 'Icelandair'], ['OG', 'FPY', 'PLAY', 'Fly Play'], ['RC', 'FLI', 'Atlantic Airways'], ['GL', 'GRL', 'Air Greenland'],
+  ['LO', 'LOT', 'LOT Polish Airlines', 'LOT'], ['OK', 'CSA', 'Czech Airlines'], ['QS', 'TVS', 'Smartwings'], ['W6', 'WZZ', 'Wizz Air', 'Wizz'],
+  ['BT', 'BTI', 'airBaltic'], ['LG', 'LGL', 'Luxair'], ['KM', 'KMM', 'KM Malta Airlines', 'Air Malta'], ['A3', 'AEE', 'Aegean Airlines', 'Aegean'],
+  ['OA', 'OAL', 'Olympic Air'], ['GQ', 'SEH', 'Sky Express'], ['TK', 'THY', 'Turkish Airlines', 'Turkish', 'THY'], ['VF', 'TKJ', 'AJet'],
+  ['PC', 'PGT', 'Pegasus Airlines', 'Pegasus'], ['XQ', 'SXS', 'SunExpress'], ['XC', 'CAI', 'Corendon Airlines', 'Corendon'],
+  ['JU', 'ASL', 'Air Serbia'], ['OU', 'CTN', 'Croatia Airlines'], ['RO', 'ROT', 'TAROM'], ['FB', 'LZB', 'Bulgaria Air'],
+  ['SU', 'AFL', 'Aeroflot'], ['S7', 'SBI', 'S7 Airlines'], ['PS', 'AUI', 'Ukraine International Airlines', 'UIA'],
+  ['J2', 'AHY', 'Azerbaijan Airlines', 'AZAL'],
+  // --- Middle East & Africa
+  ['EK', 'UAE', 'Emirates'], ['EY', 'ETD', 'Etihad Airways', 'Etihad'], ['QR', 'QTR', 'Qatar Airways', 'Qatar'], ['FZ', 'FDB', 'flydubai'],
+  ['G9', 'ABY', 'Air Arabia'], ['SV', 'SVA', 'Saudia', 'Saudi Arabian Airlines'], ['XY', 'KNE', 'flynas'], ['GF', 'GFA', 'Gulf Air'],
+  ['WY', 'OMA', 'Oman Air'], ['KU', 'KAC', 'Kuwait Airways'], ['J9', 'JZR', 'Jazeera Airways'], ['RJ', 'RJA', 'Royal Jordanian'],
+  ['ME', 'MEA', 'Middle East Airlines', 'MEA'], ['LY', 'ELY', 'El Al', 'El Al Israel Airlines'], ['IR', 'IRA', 'Iran Air'],
+  ['MS', 'MSR', 'EgyptAir'], ['ET', 'ETH', 'Ethiopian Airlines', 'Ethiopian'], ['KQ', 'KQA', 'Kenya Airways'], ['SA', 'SAA', 'South African Airways'],
+  ['FA', 'SFR', 'FlySafair'], ['AT', 'RAM', 'Royal Air Maroc'], ['WB', 'RWD', 'RwandAir'], ['TU', 'TAR', 'Tunisair'], ['AH', 'DAH', 'Air Algérie'],
+  ['MK', 'MAU', 'Air Mauritius'], ['HM', 'SEY', 'Air Seychelles'],
+  // --- Asia
+  ['SQ', 'SIA', 'Singapore Airlines'], ['TR', 'TGW', 'Scoot'], ['CX', 'CPA', 'Cathay Pacific', 'Cathay'], ['UO', 'HKE', 'HK Express'],
+  ['HX', 'CRK', 'Hong Kong Airlines'], ['NX', 'AMU', 'Air Macau'], ['JL', 'JAL', 'Japan Airlines', 'JAL'], ['NH', 'ANA', 'All Nippon Airways', 'ANA'],
+  ['MM', 'APJ', 'Peach', 'Peach Aviation'], ['GK', 'JJP', 'Jetstar Japan'], ['BC', 'SKY', 'Skymark Airlines', 'Skymark'],
+  ['KE', 'KAL', 'Korean Air'], ['OZ', 'AAR', 'Asiana Airlines', 'Asiana'], ['7C', 'JJA', 'Jeju Air'], ['LJ', 'JNA', 'Jin Air'],
+  ['TW', 'TWB', "T'way Air", 'Tway'], ['BX', 'ABL', 'Air Busan'], ['ZE', 'ESR', 'Eastar Jet'],
+  ['CA', 'CCA', 'Air China'], ['MU', 'CES', 'China Eastern Airlines', 'China Eastern'], ['CZ', 'CSN', 'China Southern Airlines', 'China Southern'],
+  ['HU', 'CHH', 'Hainan Airlines'], ['FM', 'CSH', 'Shanghai Airlines'], ['3U', 'CSC', 'Sichuan Airlines'], ['ZH', 'CSZ', 'Shenzhen Airlines'],
+  ['MF', 'CXA', 'XiamenAir', 'Xiamen Airlines'], ['9C', 'CQH', 'Spring Airlines'], ['HO', 'DKH', 'Juneyao Air'],
+  ['CI', 'CAL', 'China Airlines'], ['BR', 'EVA', 'EVA Air'], ['JX', 'SJX', 'Starlux Airlines', 'Starlux'], ['IT', 'TTW', 'Tigerair Taiwan'],
+  ['TG', 'THA', 'Thai Airways', 'Thai Airways International'], ['FD', 'AIQ', 'Thai AirAsia'], ['PG', 'BKP', 'Bangkok Airways'],
+  ['SL', 'TLM', 'Thai Lion Air'], ['VZ', 'TVJ', 'Thai Vietjet Air'], ['WE', 'THD', 'Thai Smile'],
+  ['MH', 'MAS', 'Malaysia Airlines'], ['AK', 'AXM', 'AirAsia'], ['D7', 'XAX', 'AirAsia X'], ['OD', 'MXD', 'Batik Air Malaysia', 'Malindo Air'],
+  ['GA', 'GIA', 'Garuda Indonesia', 'Garuda'], ['JT', 'LNI', 'Lion Air'], ['QZ', 'AWQ', 'Indonesia AirAsia'], ['ID', 'BTK', 'Batik Air'],
+  ['QG', 'CTV', 'Citilink'], ['PR', 'PAL', 'Philippine Airlines', 'PAL'], ['5J', 'CEB', 'Cebu Pacific'], ['Z2', 'APG', 'Philippines AirAsia'],
+  ['VN', 'HVN', 'Vietnam Airlines'], ['VJ', 'VJC', 'VietJet Air', 'Vietjet'], ['QH', 'BAV', 'Bamboo Airways'],
+  ['BI', 'RBA', 'Royal Brunei Airlines', 'Royal Brunei'], ['K6', 'KHV', 'Cambodia Angkor Air'], ['QV', 'LAO', 'Lao Airlines'],
+  ['8M', 'MMA', 'Myanmar Airways International'],
+  ['AI', 'AIC', 'Air India'], ['IX', 'AXB', 'Air India Express'], ['6E', 'IGO', 'IndiGo'], ['UK', 'VTI', 'Vistara'], ['SG', 'SEJ', 'SpiceJet'],
+  ['QP', 'AKJ', 'Akasa Air'], ['9W', 'JAI', 'Jet Airways'], ['UL', 'ALK', 'SriLankan Airlines', 'SriLankan'], ['BG', 'BBC', 'Biman Bangladesh Airlines', 'Biman'],
+  ['PK', 'PIA', 'Pakistan International Airlines', 'PIA'], ['RA', 'RNA', 'Nepal Airlines'], ['KB', 'DRK', 'Druk Air'], ['Q2', 'DQA', 'Maldivian'],
+  ['KC', 'KZR', 'Air Astana'], ['HY', 'UZB', 'Uzbekistan Airways'],
+  // --- Oceania
+  ['QF', 'QFA', 'Qantas'], ['JQ', 'JST', 'Jetstar', 'Jetstar Airways'], ['VA', 'VOZ', 'Virgin Australia'], ['ZL', 'RXA', 'Rex', 'Regional Express'],
+  ['NZ', 'ANZ', 'Air New Zealand'], ['FJ', 'FJI', 'Fiji Airways'], ['PX', 'ANG', 'Air Niugini'], ['TN', 'THT', 'Air Tahiti Nui'],
+  ['NF', 'AVN', 'Air Vanuatu'], ['SB', 'ACI', 'Aircalin'],
+];
+export const AIRLINES = AIRLINE_ROWS.map(([iata, icao, name]) => ({ iata, icao, name }));
+
+// Match key: lowercase, no accents/punctuation, and without filler words like "Airlines"/"Airways",
+// so "Qatar Airways", "qatar" and "QATAR AIRWAYS " all compare equal.
+const airlineKey = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/\b(airlines?|airways|air lines)\b/g, '').replace(/[^a-z0-9]/g, '');
+const AIRLINE_BY_KEY = new Map();
+AIRLINE_ROWS.forEach(([iata, icao, ...names], i) => {
+  for (const n of names) { const k = airlineKey(n); if (k && !AIRLINE_BY_KEY.has(k)) AIRLINE_BY_KEY.set(k, AIRLINES[i]); }
+});
+
+// Free text (a name, an alias, a bare IATA or ICAO code, or the start of one name) -> { iata, icao, name } or null.
+export function findAirline(s) {
+  const raw = String(s || '').trim();
+  if (!raw) return null;
+  const up = raw.toUpperCase();
+  if (/^[A-Z0-9]{2}$/.test(up)) return AIRLINES.find(a => a.iata === up) || null;
+  if (/^[A-Z]{3}$/.test(up)) { const a = AIRLINES.find(x => x.icao === up); if (a) return a; }
+  const k = airlineKey(raw);
+  if (!k) return null;
+  if (AIRLINE_BY_KEY.has(k)) return AIRLINE_BY_KEY.get(k);
+  if (k.length < 4) return null;
+  // A prefix like "singap" only counts if it points at one airline, or at one airline plus its
+  // offshoots ("air can" -> Air Canada over Air Canada Rouge); "air" alone stays ambiguous.
+  const hits = [...AIRLINE_BY_KEY].filter(([key]) => key.startsWith(k)).sort((a, b) => a[0].length - b[0].length);
+  if (!hits.length) return null;
+  return hits.every(([key, a]) => a === hits[0][1] || key.startsWith(hits[0][0])) ? hits[0][1] : null;
+}

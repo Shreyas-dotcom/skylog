@@ -1,5 +1,6 @@
 // Reads and writes the myFlightradar24 "flight diary" CSV format.
 // Shared by the browser app and the Node server (used to seed the first run).
+import { findAirline } from './airports.js';
 
 export const SEAT_TYPES = { 0: '', 1: 'Window', 2: 'Middle', 3: 'Aisle', 4: 'Pilot seat', 5: 'Crew seat' };
 export const CLASSES = { 0: '', 1: 'Economy', 2: 'Business', 3: 'First', 4: 'Economy+', 5: 'Private' };
@@ -40,11 +41,15 @@ export function parseAirportField(s = '') {
   return { iata: m[2], icao: m[3], label: m[1].trim() };
 }
 
-// "Japan Airlines (JL/JAL)" -> { name, iata, icao }
+// "Japan Airlines (JL/JAL)" -> { name, iata, icao }. Without codes ("Qatar", "swiss", "LX"), the codes
+// come from the built-in airline directory, and the name becomes its usual spelling.
 export function parseAirline(s = '') {
   const m = s.match(/^(.*)\(([A-Z0-9]*)\/([A-Z0-9]*)\)\s*$/);
-  if (!m) return { name: s.trim(), iata: '', icao: '' };
-  return { name: m[1].trim(), iata: m[2], icao: m[3] };
+  const name = (m ? m[1] : s).trim(), iata = m ? m[2] : '', icao = m ? m[3] : '';
+  if (iata) return { name, iata, icao };
+  const hit = findAirline(name) || findAirline(icao);
+  if (!hit) return { name, iata, icao };
+  return { name: m && name ? name : hit.name, iata: hit.iata, icao: icao || hit.icao };
 }
 
 // "Boeing 777-300ER (B77W)" -> { name, code }
