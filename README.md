@@ -4,8 +4,6 @@ A private flight log you host yourself on GitHub Pages. It shows a world map of 
 
 Works great with a **myFlightradar24 export**: import the CSV and your whole history shows up.
 
-**[See what Skylog does →](https://shreyas-dotcom.github.io/skylog/about/)** (the overview page lives in [`about/index.html`](about/index.html)).
-
 ## Set up your own (about 5 minutes)
 1. **Fork** this repository, or create a new public repo and upload `index.html`.
 2. In the repo, go to **Settings → Pages**, set **Source: Deploy from a branch**, branch `main`, folder `/ (root)`, and click **Save**. Your site will be at `https://<your-username>.github.io/<repo>/`.
