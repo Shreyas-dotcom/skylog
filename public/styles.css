@@ -132,8 +132,14 @@ a { color: var(--link); text-decoration: none; }
 .legend b { font-weight: 800; color: var(--ink-2); text-transform: uppercase; font-size: 10.5px; letter-spacing: .05em; }
 .legend span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
 .legend i { width: 18px; height: 4px; border-radius: 2px; display: inline-block; }
+.leg-switch { display: inline-flex; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); }
+.leg-switch button { border: 0; background: none; padding: 3px 8px; cursor: pointer; font: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #8b8d93; }
+.leg-switch button + button { border-left: 1px solid var(--line); }
+.leg-switch button[aria-pressed="true"] { background: #eceef1; color: var(--ink-2); }
 .legend i.dash { height: 0; border-top: 3px dashed #1e88e5; border-radius: 0; }
 .big .s .up { color: #1e88e5; }
+.link-btn { border: 0; background: none; padding: 0; font: inherit; color: #1e6fc2; text-decoration: underline dotted; text-underline-offset: 2px; cursor: pointer; }
+.link-btn:hover { color: var(--ink); }
 .up-tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 8px; background: #e3f0fd; color: #1e6fc2; font-size: 10.5px; font-weight: 900; text-transform: uppercase; letter-spacing: .03em; vertical-align: 1px; }
 .replay {
   position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(560px, calc(100% - 28px));
@@ -417,6 +423,7 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid #ccc; border-bott
   .field, .field.w1, .field.w3, .field.w6, .form-preview { grid-column: span 2; }
   .issue { grid-template-columns: 1fr; }
   .issue .acts { justify-content: flex-start; }
-  .legend { display: none; }
+  .legend { left: 8px; bottom: 8px; max-width: calc(100% - 16px); padding: 5px 8px; gap: 4px 8px; font-size: 10.5px; }
+  .legend i { width: 12px; }
   .year-select { margin: 8px; }
 }

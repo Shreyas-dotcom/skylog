@@ -1,7 +1,7 @@
 import { createMap, FREQ, freqColor } from './map.js';
 import { fromFR24CSV, toFR24CSV, SEAT_TYPES, CLASSES, REASONS, flightKey, newId, parseAirline, parseAircraft } from './fr24.js';
 import { enrich, summarize, healthCheck, byCount, journeys, delayModel, haversine, flightTimes, estimateDuration, EARTH_KM, MOON_KM, KM_PER_MI, HAULS, HAUL_RANGES } from './stats.js';
-import { COUNTRIES, AIRLINES, findAirline } from './airports.js';
+import { COUNTRIES, AIRLINES, AIRCRAFT_SIZE, findAirline } from './airports.js';
 import { VAULT_FILE, newSession, seal, openVault, exportSession, importSession, detectRepo, githubStore } from './vault.js';
 
 // ---------- small helpers
@@ -21,6 +21,7 @@ const state = {
   filter: { year: null, airport: null, airline: null, alliance: null, route: null, aircraft: null, q: '' },
   page: store.get('page', 'profile'), units: store.get('units', 'km'), mapMode: store.get('mapMode', 'flat'),
   cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all', delaySort: store.get('delaySort', 'total'), allianceSort: store.get('allianceSort', 'flights'),
+  countUpcoming: store.get('countUpcoming', false), mapColor: store.get('mapColor', 'freq'),
 };
 
 const n0 = n => Math.round(n).toLocaleString();
@@ -247,11 +248,14 @@ function recompute() {
   state.db.dismissed ||= [];
   const e = enrich(state.db);
   state.all = e.flights; state.ap = e.ap;
-  // Flights dated after today are "upcoming": shown on the map and in the list, but not counted
-  // in stats, records or milestones until they've happened.
+  // Flights dated after today are "upcoming": shown dashed on the map and tagged in the list. By
+  // default they aren't counted in stats, records or milestones until they've happened; the
+  // "Count upcoming flights" switch adds them in. state.flown is always only flights that happened
+  // (for delays and "On this day"); state.past is whatever the totals count.
   const today = new Date().toLocaleDateString('en-CA');
   for (const f of state.all) f.upcoming = f.date > today;
-  state.past = state.all.filter(f => !f.upcoming);
+  state.flown = state.all.filter(f => !f.upcoming);
+  state.past = state.countUpcoming ? state.all : state.flown;
   state.delayModel = null; // refitted lazily by the Records page
   state.upcoming = state.all.filter(f => f.upcoming);
   const dismissed = new Set(state.db.dismissed);
@@ -316,6 +320,20 @@ document.addEventListener('change', e => {
 });
 
 // ---------- map
+// Alliance colors, shared by the map's "Alliance" coloring and the Records leaderboard.
+const ALLIANCE_COLORS = { 'Star Alliance': '#a0449b', SkyTeam: '#2b6cb8', oneworld: '#de3a2e', Unaffiliated: '#8a8a8a', 'No airline': '#c4c4c4' };
+// Each route takes the alliance most of its flights were with (both directions, this period).
+function routeAlliances(list) {
+  const m = new Map();
+  for (const f of list) {
+    const k = f.airline ? f.alliance : 'No airline', r = m.get(f.routeKey) || {};
+    r[k] = (r[k] || 0) + 1; m.set(f.routeKey, r);
+  }
+  return new Map([...m].map(([key, r]) => {
+    const parts = Object.entries(r).sort((a, b) => b[1] - a[1]);
+    return [key, { top: parts[0][0], tip: parts.map(([k, n]) => `${k}${parts.length > 1 ? ` ${n}×` : ''}`).join(' · ') }];
+  }));
+}
 const map = createMap($('#map'), {
   tooltip,
   onRoute: r => { state.filter.route = r.key; go('flights'); },
@@ -323,17 +341,30 @@ const map = createMap($('#map'), {
   onUpcoming: f => openFlight(f.id),
 });
 function updateMap(s) {
+  const byAlliance = state.mapColor === 'alliance', ra = byAlliance ? routeAlliances(current.list) : null;
+  const routes = byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown)
+    .map(r => byAlliance && ra.get(r.key) ? { ...r, color: ALLIANCE_COLORS[ra.get(r.key).top], allianceTip: ra.get(r.key).tip } : r);
   map.update({
-    routes: byCount(s.routes).filter(r => !r.a.unknown && !r.b.unknown), fmtDist: dist,
+    routes, fmtDist: dist,
     airports: byCount(s.airports).filter(a => !a.a.unknown),
-    upcoming: state.upcoming.filter(inYear).filter(f => f.path).map(f => ({ key: f.id, a: f.A, b: f.B, f })),
+    upcoming: state.countUpcoming ? [] : state.upcoming.filter(inYear).filter(f => f.path).map(f => ({ key: f.id, a: f.A, b: f.B, f })),
     countries: [...s.countries.values()].map(c => c.id).filter(Boolean),
   });
-  $('#legend').innerHTML = `<b>Times flown</b>${FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('')}`
-    + (state.upcoming.length ? `<span><i class="dash"></i>Upcoming</span>` : '');
+  // The legend's title doubles as the switch between coloring by times flown and by alliance.
+  const used = byAlliance ? new Set([...ra.values()].map(x => x.top)) : null;
+  const keys = byAlliance
+    ? Object.entries(ALLIANCE_COLORS).filter(([k]) => used.has(k)).map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join('')
+    : FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('');
+  $('#legend').innerHTML = `<span class="leg-switch" role="group" aria-label="Color routes by">${[['freq', 'Times flown'], ['alliance', 'Alliance']].map(([k, l]) =>
+    `<button data-color="${k}" aria-pressed="${state.mapColor === k}">${l}</button>`).join('')}</span>${keys}`
+    + (state.upcoming.length && !state.countUpcoming ? `<span><i class="dash"></i>Upcoming</span>` : '');
   document.querySelectorAll('#seg-mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.mapMode));
 }
 $('#seg-mode').onclick = e => { const m = e.target.dataset.mode; if (!m) return; state.mapMode = m; store.set('mapMode', m); map.setMode(m); updateMap(current.s); };
+$('#legend').onclick = e => {
+  const c = e.target.closest('[data-color]')?.dataset.color; if (!c || c === state.mapColor) return;
+  state.mapColor = c; store.set('mapColor', c); updateMap(current.s);
+};
 $('#btn-reset').onclick = () => map.reset();
 $('#btn-zin').onclick = () => map.zoomBy(1.5);
 $('#btn-zout').onclick = () => map.zoomBy(1 / 1.5);
@@ -370,13 +401,22 @@ $('#rp-pause').onclick = e => { const p = e.target.textContent === 'Pause'; map.
 $('#rp-speed').onclick = e => { speedIx = (speedIx + 1) % speeds.length; e.target.textContent = speeds[speedIx] + '×'; };
 
 // ---------- profile page
+// "3 upcoming" under the flight count, with a switch to count them in all the totals or not.
+function upcomingLine() {
+  const n = state.upcoming.filter(inYear).length;
+  if (!n) return '';
+  return `<br><b class="up">${n}</b> upcoming · <button class="link-btn" data-act="toggle-upcoming" data-tip="${state.countUpcoming
+    ? 'Upcoming flights are included in every total, chart and record. Click to leave them out.'
+    : 'Upcoming flights are left out of totals until they happen. Click to include them.'}">${state.countUpcoming ? 'counted' : 'not counted'}</button>`;
+}
+
 function renderProfile(list, s) {
   const dom = list.filter(f => f.A.country && f.A.country === f.B.country).length;
   const mins = s.minutes, days = mins / 1440;
   const km = state.units === 'mi' ? s.km / KM_PER_MI : s.km, other = state.units === 'mi' ? s.km : s.km / KM_PER_MI;
   $('#big-stats').innerHTML = `
     <div class="big"><div class="v">${s.count.toLocaleString()}<small>flight${s.count === 1 ? '' : 's'}</small></div>
-      <div class="s"><b>${dom}</b> domestic<br><b>${s.count - dom}</b> international${state.upcoming.filter(inYear).length ? `<br><b class="up">${state.upcoming.filter(inYear).length}</b> upcoming` : ''}</div></div>
+      <div class="s"><b>${dom}</b> domestic<br><b>${s.count - dom}</b> international${upcomingLine()}</div></div>
     <div class="big"><div class="v">${n0(km)}<small>${state.units}</small></div>
       <div class="s"><b>${n0(other)}</b> ${state.units === 'mi' ? 'km' : 'miles'}<br><b>${(s.km / EARTH_KM).toFixed(1)}×</b> around the Earth · <b>${(s.km / MOON_KM).toFixed(2)}×</b> to the Moon</div></div>
     <div class="big"><div class="v">${Math.floor(mins / 60).toLocaleString()}<small>h</small> ${Math.round(mins % 60)}<small>min</small></div>
@@ -618,7 +658,6 @@ function renderFlights() {
 
 // ---------- records page
 // Per-alliance totals for flights that have an airline: flights, km, minutes, airlines and the top one.
-const ALLIANCE_COLORS = { 'Star Alliance': 'var(--purple-1)', SkyTeam: 'var(--blue-2)', oneworld: 'var(--red-1)', Unaffiliated: '#9aa0a6' };
 function allianceStats(list) {
   const m = new Map();
   for (const f of list) if (f.airline) {
@@ -687,7 +726,7 @@ function renderRecords(list, s) {
 
   // Delays: logged time vs. the typical time for that distance and direction, fitted to all
   // your flights (see delayModel), shown for the selected period.
-  const dm = state.delayModel ||= delayModel(state.past);
+  const dm = state.delayModel ||= delayModel(state.flown);
   const inList = new Set(list.map(f => f.id));
   const dRows = dm.rows.filter(r => inList.has(r.f.id));
   const worst = dRows.length ? maxBy(dRows, r => r.delay) : null;
@@ -704,11 +743,36 @@ function renderRecords(list, s) {
   }
   const tightest = conns.length ? minBy(conns, c => c.gap) : null, longestLay = conns.length ? maxBy(conns, c => c.gap) : null;
   const connText = c => `at ${c.a.to === c.b.from ? c.a.to : `${c.a.to} → ${c.b.from}`} · ${esc(fname(c.a))} then ${esc(fname(c.b))} · ${date(c.b.date)}`;
+  // Busiest connecting airport: where you changed planes most (airport you landed at).
+  const hubs = new Map();
+  for (const c of conns) { const h = hubs.get(c.a.to) || { code: c.a.to, ap: c.a.B, n: 0, mins: 0 }; h.n++; h.mins += c.gap; hubs.set(c.a.to, h); }
+  const topHub = [...hubs.values()].sort((a, b) => b.n - a.n || a.mins / a.n - b.mins / b.n)[0];
+
+  // Aircraft: size ranking by max takeoff weight (known types only), maker split, widebody share.
+  const types = new Map();
+  for (const f of list) {
+    const code = f.aircraftCode, size = AIRCRAFT_SIZE[code];
+    if (!size || f.heli) continue;
+    const t = types.get(code) || { code, name: f.aircraft || code, ...size, n: 0, f };
+    t.n++; types.set(code, t);
+  }
+  const sized = [...types.values()];
+  const biggest = sized.length ? maxBy(sized, t => t.t) : null, smallest = sized.length > 1 ? minBy(sized, t => t.t) : null;
+  const sizedFlights = sized.reduce((t, x) => t + x.n, 0), wideFlights = sized.filter(x => x.wide).reduce((t, x) => t + x.n, 0);
+  const typeCount = new Set(list.map(f => f.aircraftCode || f.aircraft).filter(Boolean)).size;
+  const makers = { Airbus: 0, Boeing: 0 }; let other = 0, withAc = 0;
+  for (const f of list) if (f.aircraft || f.aircraftCode) {
+    withAc++;
+    const m = /^airbus/i.test(f.aircraft) || /^A\d/.test(f.aircraftCode) || /^BCS/.test(f.aircraftCode) ? 'Airbus'
+      : /^boeing/i.test(f.aircraft) || /^B7\d|^B3\dM|^B3XM/.test(f.aircraftCode) ? 'Boeing' : null;
+    if (m) makers[m]++; else other++;
+  }
+  const acName = t => esc(t.name.replace(/\s*\(.*\)$/, ''));
 
   // On this day (all years, whatever the filter), or the next anniversary coming up.
   const now = new Date(), todayMD = now.toLocaleDateString('en-CA').slice(5);
   const todayLabel = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  const thisDay = state.past.filter(f => f.date.slice(5) === todayMD);
+  const thisDay = state.flown.filter(f => f.date.slice(5) === todayMD);
   const daysTo = f => {
     for (const y of [now.getFullYear(), now.getFullYear() + 1]) {
       const t = new Date(`${y}-${f.date.slice(5)}T00:00:00`);
@@ -716,7 +780,7 @@ function renderRecords(list, s) {
     }
     return 999;
   };
-  const nextAnniv = !thisDay.length && state.past.length ? minBy(state.past, daysTo) : null;
+  const nextAnniv = !thisDay.length && state.flown.length ? minBy(state.flown, daysTo) : null;
   const yearsAgo = f => now.getFullYear() - f.year;
 
   // Earliest wake-up and latest departure (anything before 04:00 counts as the night before).
@@ -748,11 +812,20 @@ function renderRecords(list, s) {
       seatTop && { k: 'Favorite seat', v: SEAT_TYPES[seatTop[0]], d: `${pct(seatTop[1], s.count)}% of flights (${seatTop[1]})` },
       topCountry && { k: 'Most visited country', v: esc(topCountry.name), d: `${plural(topCountry.count, 'visit')} · ${plural(topCountry.airports.size, 'airport')}` },
     ]],
+    ['Aircraft', 's-green', [
+      biggest && { k: 'Biggest aircraft', v: acName(biggest), d: `~${biggest.t.toLocaleString()} t max takeoff weight · ${plural(biggest.n, 'flight')}`, logo: flightLogo(biggest.f, 'lg'), filter: ['aircraft', biggest.code] },
+      smallest && smallest.code !== biggest.code && { k: 'Smallest aircraft', v: acName(smallest), d: `~${smallest.t.toLocaleString()} t max takeoff weight · ${plural(smallest.n, 'flight')}`, logo: flightLogo(smallest.f, 'lg'), filter: ['aircraft', smallest.code] },
+      withAc && { k: 'Airbus vs Boeing', v: `${pct(makers.Airbus, withAc)}<small>% Airbus</small> ${pct(makers.Boeing, withAc)}<small>% Boeing</small>`,
+        d: `${plural(makers.Airbus, 'Airbus flight')} · ${plural(makers.Boeing, 'Boeing flight')}${other ? ` · ${other} on other makers` : ''}` },
+      sizedFlights && { k: 'Widebody share', v: `${pct(wideFlights, sizedFlights)}<small>%</small>`, d: `${plural(wideFlights, 'flight')} on twin-aisle jets (of ${sizedFlights} with a known type)` },
+      typeCount && { k: 'Aircraft types flown', v: typeCount, d: sized.length ? `${plural(sized.filter(x => x.wide).length, 'widebody type')} · ${sized.filter(x => !x.wide).length} narrowbody or regional` : 'distinct aircraft types' },
+    ]],
     ['Delays & connections', 's-red', [
       worst && worst.delay >= dm.threshold && { k: 'Biggest delay', f: worst.f, logo: flightLogo(worst.f, 'lg'), v: `+${durTxt(worst.delay)}`,
         d: `${esc(fname(worst.f))} ${worst.f.from} → ${worst.f.to} · ${durTxt(worst.actual)} vs ~${durTxt(worst.expected)} typical` },
       dRows.length && { k: 'On-time record', v: `${pct(dRows.length - lateRows.length, dRows.length)}%<small>on time</small>`,
         d: `${lateRows.length} of ${dRows.length} flights ran ${dm.threshold}+ min long` },
+      topHub && { k: 'Busiest connecting airport', v: topHub.code, d: `${plural(topHub.n, 'connection')} · ${durTxt(Math.round(topHub.mins / topHub.n))} average layover · ${esc(topHub.ap.label)}`, filter: ['airport', topHub.code] },
       tightest && { k: 'Shortest connection', f: tightest.b, logo: flightLogo(tightest.b, 'lg'), v: durTxt(tightest.gap), d: connText(tightest) },
       longestLay && longestLay !== tightest && { k: 'Longest layover', f: longestLay.b, logo: flightLogo(longestLay.b, 'lg'), v: durTxt(longestLay.gap), d: connText(longestLay) },
     ]],
@@ -829,7 +902,7 @@ function renderRecords(list, s) {
         <span class="who" data-tip="${esc([...x.airlines.values()].sort((a, b) => b.n - a.n).map(a => `${a.name} (${a.n})`).join(', '))}"><b>${esc(x.name)}</b> <span class="muted">${plural(x.airlines.size, 'airline')} · mostly ${esc(x.top.name)}</span></span>
         <span class="track"><span class="fill" data-w="${val(x) / val(rows[0]) * 100}" style="display:block;background:${ALLIANCE_COLORS[x.name]}"></span></span>
         <span class="val">${shown(x)}</span></div>`).join('') || '<div class="note">No flights with an airline in this period.</div>'}
-      <div class="note">Uses each airline's current alliance membership. Regional airlines flying for a member (like SkyWest as United Express) count as unaffiliated.
+      <div class="note">Uses each airline's current alliance membership.
         ${noAirline ? `${plural(noAirline, 'flight')} without an airline ${noAirline === 1 ? 'is' : 'are'} left out.` : ''}</div></div>`;
   };
   const alYear = new Map();
@@ -920,6 +993,7 @@ document.addEventListener('click', e => {
       el.querySelectorAll('.ms-pop .ms-bar i').forEach(i => { i.style.width = i.dataset.w + '%'; });
       break;
     case 'delay-sort': state.delaySort = v; store.set('delaySort', v); renderRecords(current.list, current.s); break;
+    case 'toggle-upcoming': toggleUpcoming(); break;
     case 'alliance-sort': state.allianceSort = v; store.set('allianceSort', v); renderRecords(current.list, current.s); break;
     case 'rec-filter': state.filter[el.dataset.k] = v; go('flights'); break;
     case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
@@ -940,10 +1014,17 @@ document.addEventListener('mouseover', e => {
   map.highlightRoutes(r ? r.dataset.route.split(' ') : null);
 });
 
+function toggleUpcoming() {
+  state.countUpcoming = !state.countUpcoming; store.set('countUpcoming', state.countUpcoming);
+  recompute();
+  toast(state.countUpcoming ? 'Upcoming flights are now counted in totals' : 'Upcoming flights are no longer counted');
+}
+
 function applyFix(issue) {
   if (!issue?.fix) return;
   const { kind, id, patch } = issue.fix;
   if (kind === 'patch') commit(db => Object.assign(db.flights.find(f => f.id === id), patch), 'Fixed: ' + issue.fix.label);
+  else if (kind === 'patch-many') commit(db => { const ids = new Set(issue.fix.ids); for (const f of db.flights) if (ids.has(f.id)) Object.assign(f, patch); }, 'Fixed: ' + issue.fix.label);
   else if (kind === 'delete') commit(db => { db.flights = db.flights.filter(f => f.id !== id); }, 'Duplicate deleted');
   else if (kind === 'edit') openFlight(id, patch);
 }
@@ -960,7 +1041,8 @@ $('#btn-menu').onclick = e => {
   m.innerHTML = `<button data-x="import">Import flights<small>myFlightradar24 CSV or Skylog backup</small></button>
     <button data-x="csv">Export CSV<small>myFlightradar24 format, re-importable</small></button>
     <button data-x="json">Export backup (JSON)<small>Everything, unencrypted. Keep it somewhere safe.</small></button>
-    <hr><button data-x="units">Units: ${state.units === 'km' ? 'kilometres' : 'miles'}<small>Switch to ${state.units === 'km' ? 'miles' : 'kilometres'}</small></button>
+    <hr><button data-x="upcoming">Upcoming flights: ${state.countUpcoming ? 'counted' : 'not counted'}<small>${state.countUpcoming ? 'Leave future flights out of totals' : 'Include future flights in totals, charts and records'}</small></button>
+    <button data-x="units">Units: ${state.units === 'km' ? 'kilometres' : 'miles'}<small>Switch to ${state.units === 'km' ? 'miles' : 'kilometres'}</small></button>
     <button data-x="airport">Add custom airport<small>For airports missing from the built-in list</small></button>
     ${hosted ? `<hr><button data-x="settings">Security &amp; sync<small>Password, GitHub token</small></button><button data-x="lock">Lock<small>Sign out on this device</small></button>` : ''}`;
   document.body.append(m);
@@ -974,6 +1056,7 @@ $('#btn-menu').onclick = e => {
       download(`skylog-${stamp}.csv`, toFR24CSV([...state.db.flights].sort((a, b) => a.date.localeCompare(b.date)), apInfo), 'text/csv');
     }
     if (x === 'json') download(`skylog-${stamp}.json`, JSON.stringify(state.db, null, 1), 'application/json');
+    if (x === 'upcoming') toggleUpcoming();
     if (x === 'units') { state.units = state.units === 'km' ? 'mi' : 'km'; store.set('units', state.units); refresh(); }
     if (x === 'airport') openAirport(null);
     if (x === 'settings') openSettings();

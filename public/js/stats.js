@@ -313,6 +313,15 @@ export function healthCheck(all) {
   for (const [code, { a, ids }] of unknown)
     add('error', 'unknown-airport', `Unknown airport ${code}`, `${a.label} has no coordinates, so ${ids.length} flight(s) are missing from the map and distance totals.`, ids, { kind: 'airport', code });
 
+  // Airlines saved without their codes (typed as just "Qatar"). The app fills the codes in for display,
+  // but saving them keeps CSV exports and other tools complete. One finding per airline.
+  const noCodes = new Map();
+  for (const f of all) if (f.airline && !f.f.airlineIata && f.airlineIata) bump(noCodes, f.airline, () => ({ f, ids: [] }), x => x.ids.push(f.id));
+  for (const [name, { f, ids }] of noCodes)
+    add('info', 'airline-codes', `${name}: airline code missing`,
+      `${ids.length} flight(s) were saved without codes. Skylog matched them to ${f.airlineIata}/${f.airlineIcao}; save the codes so exports include them.`,
+      ids, { kind: 'patch-many', ids, patch: { airlineIata: f.airlineIata, airlineIcao: f.airlineIcao }, label: `Save ${f.airlineIata}/${f.airlineIcao}` });
+
   // Exact duplicates
   const keys = new Map();
   for (const f of all) bump(keys, flightKey(f), () => [], x => x.push(f));

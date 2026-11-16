@@ -346,3 +346,17 @@ export function findAirline(s) {
   if (!hits.length) return null;
   return hits.every(([key, a]) => a === hits[0][1] || key.startsWith(hits[0][0])) ? hits[0][1] : null;
 }
+
+// Approximate maximum takeoff weight in tonnes by ICAO aircraft type code, used to rank the biggest
+// and smallest aircraft flown. Twin-aisle (widebody) types are marked with a trailing 'W'.
+const AIRCRAFT_ROWS = `A388 575 W,B748 448 W,B744 397 W,B742 378 W,B741 340 W,A346 380 W,A345 372 W,A343 276 W,A342 275 W,
+B77W 351 W,B77L 347 W,B778 351 W,B779 352 W,B773 299 W,B772 297 W,A35K 319 W,A359 280 W,MD11 286 W,DC10 263 W,L101 225 W,
+IL96 250 W,B789 254 W,B78X 254 W,B788 228 W,A339 251 W,A338 251 W,A333 242 W,A332 242 W,A306 171 W,A310 164 W,B764 204 W,
+B763 187 W,B762 179 W,B753 123,B752 116,B39M 88,B3XM 89,B38M 82,B37M 80,B739 85,B738 79,B737 70,B736 66,B735 60,B734 68,
+B733 63,B712 54,MD90 76,MD88 68,MD83 73,MD82 68,MD87 63,A21N 97,A321 93,A20N 79,A320 78,A19N 75,A319 75,A318 68,BCS3 70,
+BCS1 61,E295 62,E290 56,E195 52,E190 52,E175 40,E75L 40,E75S 40,E170 38,E145 22,E140 21,E135 20,CRJX 41,CRJ9 38,CRJ7 34,
+CRJ2 24,CRJ1 24,SU95 49,F100 45,F70 40,RJ85 44,RJ1H 46,B463 44,DH8D 30,DH8C 19,DH8B 15,DH8A 16,AT76 23,AT75 23,AT72 23,
+AT45 18,AT43 17,SF34 13,SB20 23,D328 14,J328 15,JS41 11,B190 8,C208 4,PC12 5,DHC6 6,BN2P 3,DHC7 20,AN24 21,AN26 24,
+C919 79,AJ27 44,A124 405 W,A225 640 W`;
+export const AIRCRAFT_SIZE = Object.fromEntries(AIRCRAFT_ROWS.split(',').map(r => r.trim().split(' '))
+  .map(([code, t, w]) => [code, { t: +t, wide: w === 'W' }]));

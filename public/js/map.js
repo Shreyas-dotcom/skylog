@@ -102,7 +102,7 @@ export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
     gRoutes.selectAll('path').data(routes, r => r.key).join('path')
       .attr('class', r => 'route' + (highlight?.has(r.key) ? ' hl' : ''))
       .attr('d', r => path(line(r)))
-      .style('stroke', r => freqColor(r.count))
+      .style('stroke', r => r.color || freqColor(r.count))
       .attr('stroke-width', r => r.count >= 6 ? 2.6 : r.count >= 3 ? 2.1 : 1.6)
       .attr('stroke-opacity', 0.9);
     gRoutes.selectAll('path').order();
@@ -194,7 +194,7 @@ export function createMap(el, { tooltip, onRoute, onAirport, onUpcoming }) {
 
   function routeTip(r) {
     const dir = r.fwd === r.count ? `${r.a.iata} → ${r.b.iata}` : r.fwd === 0 ? `${r.b.iata} → ${r.a.iata}` : `${r.a.iata} ⇄ ${r.b.iata}`;
-    return `<b>${dir}</b> · ${r.count} flight${r.count > 1 ? 's' : ''}<div class="t-sub">${r.a.city} – ${r.b.city} · ${data.fmtDist(r.km)}</div>`;
+    return `<b>${dir}</b> · ${r.count} flight${r.count > 1 ? 's' : ''}<div class="t-sub">${r.a.city} – ${r.b.city} · ${data.fmtDist(r.km)}${r.allianceTip ? '<br>' + r.allianceTip : ''}</div>`;
   }
 
   function upcomingTip(f) {
