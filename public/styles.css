@@ -313,6 +313,7 @@ td.tail-cell { padding: 3px 4px 3px 12px; width: 44px; }
 .board .note { padding: 10px 16px 12px; font-size: 12px; color: var(--muted); line-height: 1.5; }
 .board .lb-row.wide { grid-template-columns: 40px 30px minmax(0, 1fr) minmax(60px, 30%) 64px; }
 .board .lb-row.plane { grid-template-columns: 26px 30px minmax(0, .8fr) minmax(0, 1.4fr); }
+.board .lb-row.alli { grid-template-columns: 40px 30px minmax(0, 1fr) minmax(50px, 28%) 88px; }
 .board .dates { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .boards > .board:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
@@ -408,6 +409,8 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid #ccc; border-bott
   .pies-in { gap: 16px 28px; }
   .big-stats { column-gap: 0; }
   .cards, .trend-row, .boards { grid-template-columns: 1fr; }
+  .board .lb-row.alli { grid-template-columns: 36px 30px minmax(0, 1fr) 76px; }
+  .board .lb-row.alli .track, .board .lb-row.alli .who .muted { display: none; }
   .page { padding: 16px; }
   .search { width: 100%; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }

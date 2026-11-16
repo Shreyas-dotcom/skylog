@@ -325,6 +325,7 @@ td.tail-cell { padding: 3px 4px 3px 12px; width: 44px; }
 .board .note { padding: 10px 16px 12px; font-size: 12px; color: var(--muted); line-height: 1.5; }
 .board .lb-row.wide { grid-template-columns: 40px 30px minmax(0, 1fr) minmax(60px, 30%) 64px; }
 .board .lb-row.plane { grid-template-columns: 26px 30px minmax(0, .8fr) minmax(0, 1.4fr); }
+.board .lb-row.alli { grid-template-columns: 40px 30px minmax(0, 1fr) minmax(50px, 28%) 88px; }
 .board .dates { font-size: 12px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .boards > .board:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
@@ -420,6 +421,8 @@ kbd { font-family: inherit; font-size: 11px; border: 1px solid #ccc; border-bott
   .pies-in { gap: 16px 28px; }
   .big-stats { column-gap: 0; }
   .cards, .trend-row, .boards { grid-template-columns: 1fr; }
+  .board .lb-row.alli { grid-template-columns: 36px 30px minmax(0, 1fr) 76px; }
+  .board .lb-row.alli .track, .board .lb-row.alli .who .muted { display: none; }
   .page { padding: 16px; }
   .search { width: 100%; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1996,9 +1999,9 @@ const GRAYS = ['#2f2f2f', '#5c5c5c', '#8a8a8a', '#b4b4b4', '#d9d9d9', '#ececec']
 
 const state = {
   db: null, all: [], ap: null, issues: [], issueBy: new Map(),
-  filter: { year: null, airport: null, airline: null, route: null, aircraft: null, q: '' },
+  filter: { year: null, airport: null, airline: null, alliance: null, route: null, aircraft: null, q: '' },
   page: store.get('page', 'profile'), units: store.get('units', 'km'), mapMode: store.get('mapMode', 'flat'),
-  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all', delaySort: store.get('delaySort', 'total'),
+  cardMetric: {}, sort: { key: 'sortTime', dir: -1 }, undo: [], healthSev: 'all', delaySort: store.get('delaySort', 'total'), allianceSort: store.get('allianceSort', 'flights'),
 };
 
 const n0 = n => Math.round(n).toLocaleString();
@@ -2245,9 +2248,10 @@ function recompute() {
 const inYear = f => !state.filter.year || f.year === state.filter.year;
 const byYear = () => state.past.filter(inYear);
 function flightsFiltered() {
-  const { airport, airline, route, aircraft, q } = state.filter;
+  const { airport, airline, alliance, route, aircraft, q } = state.filter;
   const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return state.all.filter(inYear).filter(f => (!airport || f.from === airport || f.to === airport) && (!airline || f.airline === airline)
+    && (!alliance || (f.airline && f.alliance === alliance))
     && (!route || f.routeKey === route) && (!aircraft || (f.aircraftCode || f.aircraft) === aircraft) && terms.every(t => f.search.includes(t)));
 }
 
@@ -2551,6 +2555,7 @@ function renderFlights() {
   const f0 = state.filter, chips = [];
   if (f0.airport) chips.push(['airport', `Airport: ${f0.airport}`]);
   if (f0.airline) chips.push(['airline', `Airline: ${f0.airline}`]);
+  if (f0.alliance) chips.push(['alliance', `Alliance: ${f0.alliance}`]);
   if (f0.route) chips.push(['route', `Route: ${f0.route.replace('–', ' ⇄ ')}`]);
   if (f0.aircraft) chips.push(['aircraft', `Aircraft: ${f0.aircraft}`]);
   let lastYear = null;
@@ -2593,6 +2598,19 @@ function renderFlights() {
 }
 
 // ---------- records page
+// Per-alliance totals for flights that have an airline: flights, km, minutes, airlines and the top one.
+const ALLIANCE_COLORS = { 'Star Alliance': 'var(--purple-1)', SkyTeam: 'var(--blue-2)', oneworld: 'var(--red-1)', Unaffiliated: '#9aa0a6' };
+function allianceStats(list) {
+  const m = new Map();
+  for (const f of list) if (f.airline) {
+    const x = m.get(f.alliance) || { name: f.alliance, n: 0, km: 0, min: 0, airlines: new Map() };
+    x.n++; x.km += f.dist || 0; x.min += f.dur || 0;
+    const a = x.airlines.get(f.airline) || { name: f.airline, iata: f.airlineIata, n: 0 };
+    a.n++; x.airlines.set(f.airline, a); m.set(f.alliance, x);
+  }
+  return [...m.values()].map(x => ({ ...x, top: [...x.airlines.values()].sort((a, b) => b.n - a.n)[0] })).sort((a, b) => b.n - a.n);
+}
+
 function renderRecords(list, s) {
   const page = $('#page-records');
   const bar = `<div class="toolbar"><select data-year aria-label="Year"></select>
@@ -2616,6 +2634,8 @@ function renderRecords(list, s) {
   const topTail = [...tails.values()].sort((a, b) => b.n - a.n)[0];
   const seatTop = Object.entries(s.seatType).filter(([k]) => +k).sort((a, b) => b[1] - a[1])[0];
   const topCountry = [...s.countries.values()].sort((a, b) => b.count - a.count)[0];
+  const alliances = allianceStats(list), withAirline = alliances.reduce((t, x) => t + x.n, 0);
+  const topAlliance = alliances.filter(x => x.name !== 'Unaffiliated')[0];
 
   // Calendar
   const byDay = new Map();
@@ -2703,6 +2723,9 @@ function renderRecords(list, s) {
       topRt && { k: 'Most flown route', v: `${topRt.a.iata} ⇄ ${topRt.b.iata}`, d: `${plural(topRt.count, 'flight')} · ${esc(topRt.a.city)} – ${esc(topRt.b.city)}`, filter: ['route', topRt.key] },
       topAp && { k: 'Busiest airport', v: topAp.code, d: `${plural(topAp.count, 'visit')} · ${esc(topAp.a.label)}`, filter: ['airport', topAp.code] },
       topTail && topTail.n > 1 && { k: 'Most flown aircraft (tail)', v: esc(topTail.reg), d: `${topTail.n} times · ${esc(topTail.f.aircraft)} · ${esc(topTail.f.airline)}`, logo: flightLogo(topTail.f, 'lg') },
+      topAlliance && { k: 'Favorite alliance', v: esc(topAlliance.name), logo: airlineLogo(topAlliance.top.name, topAlliance.top.iata, 'lg'),
+        d: `${plural(topAlliance.n, 'flight')} · ${pct(topAlliance.n, withAirline)}% of flights with an airline · ${plural(topAlliance.airlines.size, 'airline')}`,
+        filter: ['alliance', topAlliance.name] },
       seatTop && { k: 'Favorite seat', v: SEAT_TYPES[seatTop[0]], d: `${pct(seatTop[1], s.count)}% of flights (${seatTop[1]})` },
       topCountry && { k: 'Most visited country', v: esc(topCountry.name), d: `${plural(topCountry.count, 'visit')} · ${plural(topCountry.airports.size, 'airport')}` },
     ]],
@@ -2744,7 +2767,7 @@ function renderRecords(list, s) {
     return `<div class="rec" ${act}><div class="k">${r.k}</div><div class="main">${r.logo || ''}<div><div class="v">${r.v}</div><div class="d">${r.d}</div></div></div></div>`;
   };
   const board = (title, color, rows, val, fmt) => {
-    const top = [...rows].sort((a, b) => val(b) - val(a)).slice(0, 10), max = val(top[0]) || 1;
+    const top = [...rows].sort((a, b) => val(b) - val(a)).slice(0, 10), max = top.length ? val(top[0]) || 1 : 1;
     return `<div class="card board"><div class="head" style="background:linear-gradient(180deg,var(--${color}-1),var(--${color}-2))"><h3>${title}</h3></div>
       ${top.map((f, i) => `<div class="lb-row" data-act="edit" data-id="${f.id}"><span class="rank">${i + 1}</span>${flightLogo(f)}
         <span class="who"><b>${f.from} → ${f.to}</b> <span class="muted">${esc(fname(f))} · ${f.date}</span></span>
@@ -2775,6 +2798,21 @@ function renderRecords(list, s) {
       <div class="note">Delay = time beyond the typical time for that distance and direction, fitted to your own flights (${dm.threshold} min grace).
         ${never.length ? `Never delayed: ${never.join(', ')}.` : ''} ${dm.skipped.length ? `${plural(dm.skipped.length, 'flight')} skipped because their times and duration disagree (see Data check).` : ''}</div></div>`;
   };
+  // Flights, distance or time per alliance, using each airline's current membership.
+  const allianceBoard = () => {
+    const sk = state.allianceSort, val = sk === 'distance' ? x => x.km : sk === 'time' ? x => x.min : x => x.n;
+    const rows = [...alliances].sort((a, b) => val(b) - val(a) || b.n - a.n), total = rows.reduce((t, x) => t + val(x), 0) || 1;
+    const shown = sk === 'distance' ? x => dist(x.km) : sk === 'time' ? x => `${n0(x.min / 60)} h` : x => n0(x.n);
+    const noAirline = list.length - withAirline;
+    return `<div class="card board"><div class="head with-pills" style="background:linear-gradient(180deg,var(--green-1),var(--green-2))"><h3>Alliances</h3>
+        <div class="pills">${[['flights', 'Flights'], ['distance', 'Distance'], ['time', 'Time']].map(([k, l]) => `<button class="pill ${sk === k ? 'on' : ''}" data-act="alliance-sort" data-v="${k}">${l}</button>`).join('')}</div></div>
+      ${rows.map(x => `<div class="lb-row alli" data-act="rec-filter" data-k="alliance" data-v="${esc(x.name)}"><span class="rank">${Math.round(val(x) / total * 100)}%</span>${airlineLogo(x.top.name, x.top.iata)}
+        <span class="who" data-tip="${esc([...x.airlines.values()].sort((a, b) => b.n - a.n).map(a => `${a.name} (${a.n})`).join(', '))}"><b>${esc(x.name)}</b> <span class="muted">${plural(x.airlines.size, 'airline')} · mostly ${esc(x.top.name)}</span></span>
+        <span class="track"><span class="fill" data-w="${val(x) / val(rows[0]) * 100}" style="display:block;background:${ALLIANCE_COLORS[x.name]}"></span></span>
+        <span class="val">${shown(x)}</span></div>`).join('') || '<div class="note">No flights with an airline in this period.</div>'}
+      <div class="note">Uses each airline's current alliance membership. Regional airlines flying for a member (like SkyWest as United Express) count as unaffiliated.
+        ${noAirline ? `${plural(noAirline, 'flight')} without an airline ${noAirline === 1 ? 'is' : 'are'} left out.` : ''}</div></div>`;
+  };
   const alYear = new Map();
   for (const f of list) if (f.airline) {
     const y = alYear.get(f.year) || { total: 0, al: new Map() };
@@ -2802,7 +2840,7 @@ function renderRecords(list, s) {
     const items = recs.filter(r => r && r.v != null && r.v !== '');
     return items.length ? `<div class="rec-section ${cls}"><div class="section-h">${title}</div><div class="rec-grid">${items.map(card).join('')}</div></div>` : '';
   }).join('') + `<div class="section-h">Leaderboards</div><div class="boards">
-    ${delayBoard()}${yearBoard}${planeBoard}
+    ${allianceBoard()}${delayBoard()}${yearBoard}${planeBoard}
     ${board('Longest flights', 'blue', flown, f => f.dist, f => dist(f.dist))}
     ${board('Longest time in the air', 'purple', timed, f => f.dur, f => dur(f.dur))}</div>`;
   renderYearSelect();
@@ -2863,6 +2901,7 @@ document.addEventListener('click', e => {
       el.querySelectorAll('.ms-pop .ms-bar i').forEach(i => { i.style.width = i.dataset.w + '%'; });
       break;
     case 'delay-sort': state.delaySort = v; store.set('delaySort', v); renderRecords(current.list, current.s); break;
+    case 'alliance-sort': state.allianceSort = v; store.set('allianceSort', v); renderRecords(current.list, current.s); break;
     case 'rec-filter': state.filter[el.dataset.k] = v; go('flights'); break;
     case 'year-pick': setFilter({ year: state.filter.year === +v ? null : +v }); break;
     case 'edit': openFlight(el.dataset.id); break;
