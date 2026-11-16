@@ -18,6 +18,8 @@ const bundle = MODULES.map(m => `// ---- ${m}\n` + read('public/js/' + m)
   .replace(/^import[\s\S]*?from\s+['"][^'"]+['"];?[ \t]*$/gm, '')
   .replace(/^export\s+(?=(const|let|function|async|class)\b)/gm, '')).join('\n');
 
+// Alliance marks (Wikimedia Commons, see vendor/NOTICE.md), inlined so they work offline.
+const ALLIANCE_LOGOS = { 'Star Alliance': 'star-alliance.svg', SkyTeam: 'skyteam.svg', oneworld: 'oneworld.svg' };
 const test = process.argv.includes('--test'), clean = test || process.argv.includes('--clean');
 const seedPath = path.join(ROOT, 'data/seed.csv');
 const { flights, airportsSeen } = !clean && fs.existsSync(seedPath)
@@ -25,7 +27,9 @@ const { flights, airportsSeen } = !clean && fs.existsSync(seedPath)
 const seed = { version: 1, flights, customAirports: {}, airportLabels: airportsSeen, dismissed: [] };
 const data = `window.SKYLOG_ATLAS={lo:${read('vendor/countries-110m.json')},hi:${read('vendor/countries-50m.json')}};
 window.SKYLOG_SEED=${JSON.stringify(seed)};
-window.SKYLOG_CITIES=${read('vendor/cities.json')};${test ? `
+window.SKYLOG_CITIES=${read('vendor/cities.json')};
+window.SKYLOG_ALLIANCE_LOGOS=${JSON.stringify(Object.fromEntries(Object.entries(ALLIANCE_LOGOS).map(([k, f]) =>
+  [k, 'data:image/svg+xml;base64,' + Buffer.from(read('vendor/alliance-logos/' + f)).toString('base64')])))};${test ? `
 window.SKYLOG_CONFIG={repo:'tester/skylog',api:'http://127.0.0.1:5199'};` : ''}`;
 
 const html = read('public/index.html')

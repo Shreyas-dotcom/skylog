@@ -322,6 +322,13 @@ document.addEventListener('change', e => {
 // ---------- map
 // Alliance colors, shared by the map's "Alliance" coloring and the Records leaderboard.
 const ALLIANCE_COLORS = { 'Star Alliance': '#a0449b', SkyTeam: '#2b6cb8', oneworld: '#de3a2e', Unaffiliated: '#8a8a8a', 'No airline': '#c4c4c4' };
+// Alliance marks, inlined by the build (vendor/alliance-logos). Unaffiliated gets a plain plane badge.
+const UNAFFILIATED_MARK = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#8a8a8a"/><path transform="rotate(45 12 12) translate(4.2 4.2) scale(.65)" fill="#fff" d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>');
+const allianceSrc = name => (globalThis.SKYLOG_ALLIANCE_LOGOS || {})[name] || (name === 'Unaffiliated' ? UNAFFILIATED_MARK : '');
+function allianceLogo(name, size = '') {
+  const src = allianceSrc(name);
+  return `<span class="tail alliance ${size} ${src ? '' : 'nologo'}" title="${esc(name)}">${src ? `<img src="${src}" alt="">` : ''}${BLANK_TAIL}</span>`;
+}
 // Each route takes the alliance most of its flights were with (both directions, this period).
 function routeAlliances(list) {
   const m = new Map();
@@ -353,7 +360,7 @@ function updateMap(s) {
   // The legend's title doubles as the switch between coloring by times flown and by alliance.
   const used = byAlliance ? new Set([...ra.values()].map(x => x.top)) : null;
   const keys = byAlliance
-    ? Object.entries(ALLIANCE_COLORS).filter(([k]) => used.has(k)).map(([k, c]) => `<span><i style="background:${c}"></i>${k}</span>`).join('')
+    ? Object.entries(ALLIANCE_COLORS).filter(([k]) => used.has(k)).map(([k, c]) => `<span><i style="background:${c}"></i>${allianceSrc(k) ? `<img class="leg-logo" src="${allianceSrc(k)}" alt="">` : ''}${k}</span>`).join('')
     : FREQ.map(b => `<span><i style="background:${b.color}"></i>${b.label}</span>`).join('');
   $('#legend').innerHTML = `<span class="leg-switch" role="group" aria-label="Color routes by">${[['freq', 'Times flown'], ['alliance', 'Alliance']].map(([k, l]) =>
     `<button data-color="${k}" aria-pressed="${state.mapColor === k}">${l}</button>`).join('')}</span>${keys}`
@@ -806,7 +813,7 @@ function renderRecords(list, s) {
       topRt && { k: 'Most flown route', v: `${topRt.a.iata} ⇄ ${topRt.b.iata}`, d: `${plural(topRt.count, 'flight')} · ${esc(topRt.a.city)} – ${esc(topRt.b.city)}`, filter: ['route', topRt.key] },
       topAp && { k: 'Busiest airport', v: topAp.code, d: `${plural(topAp.count, 'visit')} · ${esc(topAp.a.label)}`, filter: ['airport', topAp.code] },
       topTail && topTail.n > 1 && { k: 'Most flown aircraft (tail)', v: esc(topTail.reg), d: `${topTail.n} times · ${esc(topTail.f.aircraft)} · ${esc(topTail.f.airline)}`, logo: flightLogo(topTail.f, 'lg') },
-      topAlliance && { k: 'Favorite alliance', v: esc(topAlliance.name), logo: airlineLogo(topAlliance.top.name, topAlliance.top.iata, 'lg'),
+      topAlliance && { k: 'Favorite alliance', v: esc(topAlliance.name), logo: allianceLogo(topAlliance.name, 'lg'),
         d: `${plural(topAlliance.n, 'flight')} · ${pct(topAlliance.n, withAirline)}% of flights with an airline · ${plural(topAlliance.airlines.size, 'airline')}`,
         filter: ['alliance', topAlliance.name] },
       seatTop && { k: 'Favorite seat', v: SEAT_TYPES[seatTop[0]], d: `${pct(seatTop[1], s.count)}% of flights (${seatTop[1]})` },
@@ -898,7 +905,7 @@ function renderRecords(list, s) {
     const noAirline = list.length - withAirline;
     return `<div class="card board"><div class="head with-pills" style="background:linear-gradient(180deg,var(--green-1),var(--green-2))"><h3>Alliances</h3>
         <div class="pills">${[['flights', 'Flights'], ['distance', 'Distance'], ['time', 'Time']].map(([k, l]) => `<button class="pill ${sk === k ? 'on' : ''}" data-act="alliance-sort" data-v="${k}">${l}</button>`).join('')}</div></div>
-      ${rows.map(x => `<div class="lb-row alli" data-act="rec-filter" data-k="alliance" data-v="${esc(x.name)}"><span class="rank">${Math.round(val(x) / total * 100)}%</span>${airlineLogo(x.top.name, x.top.iata)}
+      ${rows.map(x => `<div class="lb-row alli" data-act="rec-filter" data-k="alliance" data-v="${esc(x.name)}"><span class="rank">${Math.round(val(x) / total * 100)}%</span>${allianceLogo(x.name)}
         <span class="who" data-tip="${esc([...x.airlines.values()].sort((a, b) => b.n - a.n).map(a => `${a.name} (${a.n})`).join(', '))}"><b>${esc(x.name)}</b> <span class="muted">${plural(x.airlines.size, 'airline')} · mostly ${esc(x.top.name)}</span></span>
         <span class="track"><span class="fill" data-w="${val(x) / val(rows[0]) * 100}" style="display:block;background:${ALLIANCE_COLORS[x.name]}"></span></span>
         <span class="val">${shown(x)}</span></div>`).join('') || '<div class="note">No flights with an airline in this period.</div>'}

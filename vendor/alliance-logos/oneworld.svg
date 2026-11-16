@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.0"
+   width="200"
+   height="200"
+   id="svg2"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   sodipodi:docname="Oneworld_logo.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <metadata
+     id="metadata73">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs71">
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 250 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="500 : 250 : 1"
+       inkscape:persp3d-origin="250 : 166.66667 : 1"
+       id="perspective75" />
+  </defs>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1131"
+     id="namedview69"
+     showgrid="false"
+     inkscape:zoom="1.5920331"
+     inkscape:cx="229.26659"
+     inkscape:cy="52.134594"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g4"
+     inkscape:showpageshadow="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1" />
+  <g
+     id="g4"
+     transform="matrix(0.40160643,0,0,0.40160643,-0.40160643,-0.40160643)">
+    <path
+       style="fill:#120c80;stroke:#5752a6;stroke-width:0;fill-opacity:1"
+       d="M 499,250 A 249,249 0 0 1 250,499 249,249 0 0 1 1,250 249,249 0 0 1 250,1 249,249 0 0 1 499,250 Z"
+       id="C1" />
+    <radialGradient
+       id="G1"
+       gradientUnits="userSpaceOnUse"
+       cx="250"
+       cy="250"
+       r="250">
+      <stop
+         offset="0.00"
+         style="stop-color:#191987; stop-opacity:0"
+         id="stop8" />
+      <stop
+         offset="0.5"
+         style="stop-color:#191987; stop-opacity:0.20"
+         id="stop10" />
+      <stop
+         offset="0.8"
+         style="stop-color:#191987; stop-opacity:0.75"
+         id="stop12" />
+      <stop
+         offset="1.00"
+         style="stop-color:#191987; stop-opacity:1"
+         id="stop14" />
+    </radialGradient>
+    <radialGradient
+       id="G2"
+       gradientUnits="userSpaceOnUse"
+       cx="250"
+       cy="250"
+       r="300"
+       fx="108"
+       fy="60">
+      <stop
+         offset="0.00"
+         style="stop-color:#FFFFFF; stop-opacity:0.95"
+         id="stop17" />
+      <stop
+         offset="0.25"
+         style="stop-color:#FFFFFF; stop-opacity:0.85"
+         id="stop19" />
+      <stop
+         offset="0.85"
+         style="stop-color:#FFFFFF; stop-opacity:0"
+         id="stop21" />
+      <stop
+         offset="1.00"
+         style="stop-color:#FFFFFF; stop-opacity:0"
+         id="stop23" />
+    </radialGradient>
+    <radialGradient
+       id="G3"
+       gradientUnits="userSpaceOnUse"
+       cx="250"
+       cy="250"
+       r="249">
+      <stop
+         offset="0.00"
+         style="stop-color:#534fa3; stop-opacity:1"
+         id="stop26" />
+      <stop
+         offset="0.47"
+         style="stop-color:#191987; stop-opacity:0.55"
+         id="stop28" />
+      <stop
+         offset="1.00"
+         style="stop-color:#191987; stop-opacity:0"
+         id="stop30" />
+    </radialGradient>
+    <radialGradient
+       id="G4"
+       gradientUnits="userSpaceOnUse"
+       cx="250"
+       cy="250"
+       r="249"
+       fx="108"
+       fy="60">
+      <stop
+         offset="0.00"
+         style="stop-color:#FFFFFF; stop-opacity:0.70"
+         id="stop33" />
+      <stop
+         offset="0.25"
+         style="stop-color:#FFFFFF; stop-opacity:0.35"
+         id="stop35" />
+      <stop
+         offset="1.00"
+         style="stop-color:#9592c7; stop-opacity:0"
+         id="stop37" />
+    </radialGradient>
+    <radialGradient
+       id="G5"
+       gradientUnits="userSpaceOnUse"
+       cx="250"
+       cy="250"
+       r="249">
+      <stop
+         offset="0.00"
+         style="stop-color:#191987; stop-opacity:0"
+         id="stop40" />
+      <stop
+         offset="0.89"
+         style="stop-color:#191987; stop-opacity:0"
+         id="stop42" />
+      <stop
+         offset="0.97"
+         style="stop-color:#191987; stop-opacity:0.07"
+         id="stop44" />
+      <stop
+         offset="1.00"
+         style="stop-color:#191987; stop-opacity:0.2"
+         id="stop46" />
+    </radialGradient>
+    <path
+       d="m 53.337,285.563 c 17.191,0 30.249,-9.493 30.249,-29.853 0,-20.12 -12.945,-29.594 -30.249,-29.594 -15.451,0 -30.256,7.82 -30.256,29.594 0,20.36 13.057,29.853 30.256,29.853 m 0,-13.04 c -10.55,0 -11.713,-10.439 -11.713,-16.796 0,-15.83 8.397,-16.605 11.713,-16.605 3.704,0 11.705,0.775 11.705,16.605 0,6.237 -0.964,16.796 -11.705,16.796"
+       id="path53"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+    <path
+       d="m 109.407,228.167 h -16.58 v 55.295 h 17.269 v -28.578 c 0,-2.395 0.215,-15.142 11.576,-15.142 9.207,0 9.767,8.82 9.767,14.263 v 29.457 h 17.252 v -34.728 c 0,-20.568 -11.464,-22.618 -19.292,-22.618 -7.726,0 -15.332,2.601 -19.991,8.699"
+       id="path55"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+    <path
+       d="m 198.576,267.459 c -1.413,4.909 -5.151,5.701 -9.948,5.701 -10.335,0 -12.316,-7.976 -12.419,-13.298 H 217.8 l -0.104,-3.066 c -0.215,-6.752 -1.645,-30.679 -28.525,-30.679 -18.061,0 -31.006,10.439 -31.006,29.594 0,28.198 22.419,29.853 29.706,29.853 10.232,0 24.374,-2.429 28.732,-18.104 m -40.395,-16.865 c 0.319,-5.667 2.963,-12.971 12.755,-12.971 4.022,0 10.155,1.12 10.37,12.971 h -23.125 z"
+       id="path57"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+    <polyline
+       points="260.209,233.833 274.945,283.462 281.422,283.462    298.476,228.167 293.136,228.167 278.08,277.691 263.224,228.167 257.186,228.167 242.337,277.691 227.256,228.167    221.925,228.167 238.987,283.462 245.472,283.462"
+       id="polyline59"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+    <path
+       d="m 304.194,255.814 c 0,16.434 7.425,29.853 25.976,29.853 18.501,0 25.942,-13.419 25.942,-29.853 0,-16.417 -7.441,-29.818 -25.942,-29.818 -18.551,0 -25.976,13.401 -25.976,29.818 m 5.099,0 c 0,-15.659 6.787,-25.994 20.877,-25.994 14.057,0 20.844,10.335 20.844,25.994 0,15.675 -6.787,26.011 -20.844,26.011 -14.09,0 -20.877,-10.336 -20.877,-26.011"
+       id="path61"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+    <path
+       d="m 394.318,227.099 h -2.566 c -9.25,0 -16.277,5.65 -18.965,12.506 h -0.207 v -11.438 h -4.926 v 55.295 h 4.926 V 257.02 c 0,-22.428 12.023,-24.805 19.292,-25.029 h 2.446"
+       id="path63"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+    <rect
+       x="403.396"
+       y="207.289"
+       width="4.7709999"
+       height="76.172997"
+       id="rect65"
+       style="fill:#ffffff" />
+    <path
+       d="m 464.151,207.289 v 30.146 c -3.617,-7.407 -11.3,-11.438 -19.913,-11.438 -13.125,0 -24.425,8.389 -24.425,29.06 0,6.099 1.016,30.611 24.648,30.611 14.246,0 18.553,-8.837 19.448,-11.026 h 0.241 v 8.821 h 4.961 V 207.29 m -44.095,47.663 c 0,-11.749 4.736,-25.133 18.981,-25.133 12.782,0 20.379,10.232 20.379,26.338 0,18.707 -10.405,25.667 -20.138,25.667 -4.289,0 -19.222,-1.085 -19.222,-26.872"
+       id="path67"
+       style="fill:#ffffff;fill-rule:evenodd"
+       clip-rule="evenodd" />
+  </g>
+</svg>

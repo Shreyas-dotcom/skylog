@@ -6,7 +6,11 @@
 // Every save is a commit, so git history doubles as a full version history.
 
 const enc = new TextEncoder(), dec = new TextDecoder();
-const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+// Bytes -> base64 in 32 KB chunks: spreading a whole buffer into fromCharCode throws a RangeError
+// past the engine's argument limit (about 124 KB in Chrome, 64 KB in Safari), which would make
+// every save fail once the log grew that big.
+const bytesToBin = bytes => { let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return bin; };
+const b64 = buf => btoa(bytesToBin(new Uint8Array(buf)));
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const ITERATIONS = 600000;
 
@@ -69,7 +73,7 @@ export function detectRepo() {
   return { owner: m[1], repo: first && !first.includes('.') ? first : `${m[1]}.github.io`, api: 'https://api.github.com' };
 }
 
-const utf8b64 = s => { const bytes = enc.encode(s); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+const utf8b64 = s => btoa(bytesToBin(enc.encode(s)));
 
 export function githubStore(where) {
   const url = `${where.api}/repos/${where.owner}/${where.repo}/contents/${VAULT_FILE}`;
